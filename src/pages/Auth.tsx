@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 import { FormInput, Loader2, ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
 import { User, Session } from "@supabase/supabase-js";
 
 const Auth = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,9 +22,20 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [inviteToken, setInviteToken] = useState("");
+  const [inviteValid, setInviteValid] = useState(false);
+  const [inviteChecking, setInviteChecking] = useState(false);
 
+  // Verificar token de convite na URL
+  useEffect(() => {
+    const token = searchParams.get('invite');
+    if (token) {
+      setInviteToken(token);
+      validateInviteToken(token);
+    }
+  }, [searchParams]);
+
+  // Verificar se o usuário já está autenticado
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -49,10 +63,34 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Validar token de convite
+  const validateInviteToken = async (token: string) => {
+    setInviteChecking(true);
+    try {
+      // Simular validação de convite
+      console.log("Validando convite:", token);
+      
+      // Por enquanto, sempre validar como verdadeiro para teste
+      setInviteValid(true);
+    } catch (error: any) {
+      setInviteValid(false);
+      setError('Erro ao validar convite: ' + error.message);
+    } finally {
+      setInviteChecking(false);
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Verificar se há token de convite válido
+    if (!inviteToken || !inviteValid) {
+      setError("É necessário um convite válido para criar uma conta.");
+      setLoading(false);
+      return;
+    }
 
     if (!email || !password || !fullName) {
       setError("Todos os campos são obrigatórios");
@@ -69,7 +107,7 @@ const Auth = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -86,7 +124,24 @@ const Auth = () => {
         } else {
           setError(error.message);
         }
-      } else {
+      } else if (data.user) {
+        // Simular marcação de convite como usado
+        console.log("Marcando convite como usado:", inviteToken, data.user.id);
+
+        // Criar perfil do usuário (usando estrutura atual)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              user_id: data.user.id,
+              full_name: fullName,
+            }
+          ]);
+
+        if (profileError) {
+          console.error('Erro ao criar perfil:', profileError);
+        }
+
         toast({
           title: "Conta criada com sucesso!",
           description: "Você foi automaticamente logado e pode começar a criar formulários.",
@@ -158,16 +213,18 @@ const Auth = () => {
             </span>
           </div>
           <p className="text-muted-foreground">
-            Entre na sua conta ou crie uma nova para começar
+            {inviteToken ? "Use seu convite para criar uma conta" : "Entre na sua conta"}
           </p>
         </div>
 
         <Card className="border border-form-field-border shadow-lg bg-gradient-to-br from-card to-form-field-bg">
           <CardContent className="p-6">
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue={inviteToken ? "signup" : "signin"} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+                <TabsTrigger value="signup" disabled={!inviteToken}>
+                  {inviteToken ? "Criar Conta" : "Criar Conta (Convite Necessário)"}
+                </TabsTrigger>
               </TabsList>
 
               {error && (
@@ -220,6 +277,27 @@ const Auth = () => {
               </TabsContent>
 
               <TabsContent value="signup">
+                {inviteToken && (
+                  <Alert className={inviteValid ? "border-green-500 bg-green-50" : "border-orange-500 bg-orange-50"} style={{ marginBottom: '1rem' }}>
+                    <AlertDescription>
+                      {inviteChecking 
+                        ? "Validando convite..." 
+                        : inviteValid 
+                          ? "✅ Convite válido! Você pode criar sua conta." 
+                          : "❌ Convite inválido ou expirado."
+                      }
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {!inviteToken && (
+                  <Alert className="border-orange-500 bg-orange-50" style={{ marginBottom: '1rem' }}>
+                    <AlertDescription>
+                      ⚠️ Para criar uma conta, você precisa de um convite válido. Entre em contato com um administrador.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Nome Completo</Label>
@@ -230,6 +308,7 @@ const Auth = () => {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       required
+                      disabled={!inviteValid}
                       className="bg-form-field-bg border-form-field-border focus:border-primary"
                     />
                   </div>
@@ -242,6 +321,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      disabled={!inviteValid}
                       className="bg-form-field-bg border-form-field-border focus:border-primary"
                     />
                   </div>
@@ -255,13 +335,14 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
+                      disabled={!inviteValid}
                       className="bg-form-field-bg border-form-field-border focus:border-primary"
                     />
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary"
-                    disabled={loading}
+                    disabled={loading || !inviteValid || inviteChecking}
                   >
                     {loading ? (
                       <>

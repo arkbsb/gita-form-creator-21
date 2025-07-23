@@ -19,8 +19,11 @@ import {
   Download,
   Users,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  Mail,
+  FileText
 } from "lucide-react";
+import InviteManager from "@/components/InviteManager";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
@@ -417,9 +420,19 @@ const Dashboard = () => {
 
         {/* Tabs for Forms and Data Visualization */}
         <Tabs defaultValue="forms" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="forms">Gerenciar Formulários</TabsTrigger>
-            <TabsTrigger value="data">Visualizar Dados</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="forms" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Gerenciar Formulários
+            </TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Visualizar Dados
+            </TabsTrigger>
+            <TabsTrigger value="invites" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Gerenciar Convites
+            </TabsTrigger>
           </TabsList>
 
           {/* Forms Management Tab */}
@@ -714,6 +727,11 @@ const Dashboard = () => {
                 </Card>
               )}
             </div>
+          </TabsContent>
+
+          {/* Invites Management Tab */}
+          <TabsContent value="invites" className="space-y-6">
+            <InviteManager />
           </TabsContent>
         </Tabs>
       </main>
