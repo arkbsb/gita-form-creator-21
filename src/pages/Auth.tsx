@@ -67,11 +67,24 @@ const Auth = () => {
   const validateInviteToken = async (token: string) => {
     setInviteChecking(true);
     try {
-      // Simular validação de convite
-      console.log("Validando convite:", token);
-      
-      // Por enquanto, sempre validar como verdadeiro para teste
-      setInviteValid(true);
+      const { data, error } = await (supabase as any).rpc('use_invitation_token', {
+        p_token: token,
+        p_user_id: null // Apenas validar, não usar ainda
+      }) as { data: { success: boolean; error?: string } | null; error: any };
+
+      if (error) {
+        console.error('Erro ao validar convite:', error);
+        setInviteValid(false);
+        setError('Erro ao validar convite: ' + error.message);
+        return;
+      }
+
+      if (data && data.success) {
+        setInviteValid(true);
+      } else {
+        setInviteValid(false);
+        setError((data && data.error) || 'Convite inválido ou expirado');
+      }
     } catch (error: any) {
       setInviteValid(false);
       setError('Erro ao validar convite: ' + error.message);
@@ -125,8 +138,15 @@ const Auth = () => {
           setError(error.message);
         }
       } else if (data.user) {
-        // Simular marcação de convite como usado
-        console.log("Marcando convite como usado:", inviteToken, data.user.id);
+        // Marcar convite como usado
+        const { error: inviteError } = await (supabase as any).rpc('use_invitation_token', {
+          p_token: inviteToken,
+          p_user_id: data.user.id
+        });
+
+        if (inviteError) {
+          console.error('Erro ao marcar convite como usado:', inviteError);
+        }
 
         // Criar perfil do usuário (usando estrutura atual)
         const { error: profileError } = await supabase
@@ -135,6 +155,7 @@ const Auth = () => {
             {
               user_id: data.user.id,
               full_name: fullName,
+              invitation_token: inviteToken
             }
           ]);
 
