@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle, FormInput, Share2, Webhook, Zap } from "lucide-react";
+import { CheckCircle, FormInput, Share2, Webhook, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import logoImage from "@/assets/logo.jpg";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -60,12 +61,7 @@ const Index = () => {
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center">
-              <FormInput className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-              Gita Responses
-            </span>
+            <img src={logoImage} alt="Gita" className="h-8 w-auto" />
           </div>
           <div className="flex items-center space-x-4">
             {user ? (
@@ -107,19 +103,6 @@ const Index = () => {
             Sistema completo para criação, publicação e análise de formulários. 
             Interface intuitiva, webhooks personalizáveis e design moderno.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              onClick={handleGetStarted}
-              className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              {user ? 'Ir para Dashboard' : 'Começar Gratuitamente'}
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button variant="outline" size="lg">
-              Ver Demonstração
-            </Button>
-          </div>
         </div>
 
         {/* Features Grid */}
@@ -205,14 +188,6 @@ const Index = () => {
           <p className="text-muted-foreground mb-8 max-w-md mx-auto">
             Crie sua conta e comece a criar formulários profissionais em minutos.
           </p>
-          <Button 
-            size="lg" 
-            onClick={handleGetStarted}
-            className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            {user ? 'Acessar Dashboard' : 'Criar Conta Gratuita'}
-            <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
         </div>
       </main>
 
