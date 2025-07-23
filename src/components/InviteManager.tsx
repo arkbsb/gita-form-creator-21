@@ -48,9 +48,14 @@ const InviteManager = () => {
 
   const fetchInvitations = async () => {
     try {
-      // Simular busca por convites - implementar após migração
-      console.log("Buscando convites...");
-      setInvitations([]);
+      const { data, error } = await (supabase as any)
+        .from('user_invitations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setInvitations(data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar convites",
@@ -67,29 +72,42 @@ const InviteManager = () => {
     setCreating(true);
 
     try {
-      // Gerar token único temporário
-      const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      // Gerar token único usando a função do banco
+      const { data: tokenData, error: tokenError } = await (supabase as any).rpc('generate_invitation_token');
       
+      if (tokenError) throw tokenError;
+
       // Calcular data de expiração
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(formData.expires_in_days));
 
-      // Simular criação de convite
-      console.log("Criando convite:", {
-        email: formData.email || null,
-        token: token,
-        expires_at: expiresAt.toISOString(),
-        max_uses: parseInt(formData.max_uses),
-        description: formData.description || null
-      });
+      // Obter o usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Criar convite na base de dados
+      const { data, error } = await (supabase as any)
+        .from('user_invitations')
+        .insert({
+          created_by: user.id,
+          email: formData.email || null,
+          token: tokenData,
+          expires_at: expiresAt.toISOString(),
+          max_uses: parseInt(formData.max_uses),
+          description: formData.description || null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
 
       // Gerar e copiar link do convite
-      const inviteUrl = getAppUrl(`/auth?invite=${token}`);
+      const inviteUrl = getAppUrl(`/invite/${tokenData}`);
       await navigator.clipboard.writeText(inviteUrl);
 
       toast({
         title: "Convite criado!",
-        description: "Link copiado para a área de transferência. Funcionalidade será ativada após aplicar migrações.",
+        description: "Link copiado para a área de transferência.",
       });
 
       setDialogOpen(false);
@@ -112,7 +130,7 @@ const InviteManager = () => {
   };
 
   const copyInviteLink = async (token: string) => {
-    const inviteUrl = getAppUrl(`/auth?invite=${token}`);
+    const inviteUrl = getAppUrl(`/invite/${token}`);
     await navigator.clipboard.writeText(inviteUrl);
     toast({
       title: "Link copiado!",
@@ -122,12 +140,19 @@ const InviteManager = () => {
 
   const deactivateInvitation = async (id: string) => {
     try {
-      // Simular desativação
-      console.log("Desativando convite:", id);
+      const { error } = await (supabase as any)
+        .from('user_invitations')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
 
       toast({
         title: "Convite desativado",
-        description: "O convite foi desativado com sucesso. Funcionalidade será ativada após aplicar migrações.",
+        description: "O convite foi desativado com sucesso.",
       });
 
       fetchInvitations();

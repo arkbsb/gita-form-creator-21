@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const { token: urlToken } = useParams();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,12 +29,12 @@ const Auth = () => {
 
   // Verificar token de convite na URL
   useEffect(() => {
-    const token = searchParams.get('invite');
+    const token = searchParams.get('invite') || urlToken;
     if (token) {
       setInviteToken(token);
       validateInviteToken(token);
     }
-  }, [searchParams]);
+  }, [searchParams, urlToken]);
 
   // Verificar se o usuário já está autenticado
   useEffect(() => {

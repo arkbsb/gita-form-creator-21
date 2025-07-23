@@ -27,6 +27,7 @@ const App = () => (
           <Route path="/edit-form/:formId" element={<CreateEditForm />} />
           <Route path="/form/:slug" element={<PublicForm />} />
           <Route path="/form-analytics/:formId" element={<FormAnalytics />} />
+          <Route path="/invite/:token" element={<Auth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
