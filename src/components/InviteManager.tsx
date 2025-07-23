@@ -72,10 +72,14 @@ const InviteManager = () => {
     setCreating(true);
 
     try {
-      // Gerar token único usando a função do banco
-      const { data: tokenData, error: tokenError } = await (supabase as any).rpc('generate_invitation_token');
+      // Gerar token único localmente (temporário até aplicar migração)
+      const generateToken = () => {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return btoa(String.fromCharCode(...array)).replace(/[+/]/g, '').slice(0, 43);
+      };
       
-      if (tokenError) throw tokenError;
+      const token = generateToken();
 
       // Calcular data de expiração
       const expiresAt = new Date();
@@ -91,7 +95,7 @@ const InviteManager = () => {
         .insert({
           created_by: user.id,
           email: formData.email || null,
-          token: tokenData,
+          token: token,
           expires_at: expiresAt.toISOString(),
           max_uses: parseInt(formData.max_uses),
           description: formData.description || null
@@ -102,7 +106,7 @@ const InviteManager = () => {
       if (error) throw error;
 
       // Gerar e copiar link do convite
-      const inviteUrl = getAppUrl(`/invite/${tokenData}`);
+      const inviteUrl = getAppUrl(`/invite/${token}`);
       await navigator.clipboard.writeText(inviteUrl);
 
       toast({
