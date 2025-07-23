@@ -1,0 +1,834 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { 
+  ArrowLeft, 
+  Plus, 
+  Trash2, 
+  GripVertical, 
+  Save, 
+  Eye, 
+  Settings,
+  FormInput,
+  Mail,
+  Phone,
+  Hash,
+  Calendar,
+  Clock,
+  FileText,
+  List,
+  CheckSquare,
+  Upload
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate, useParams } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
+
+interface FormField {
+  id: string;
+  type: string;
+  label: string;
+  description: string;
+  placeholder: string;
+  is_required: boolean;
+  options: string[];
+  order_index: number;
+}
+
+interface FormData {
+  title: string;
+  description: string;
+  slug: string;
+  is_published: boolean;
+  allow_multiple_submissions: boolean;
+  show_progress_bar: boolean;
+  require_login: boolean;
+  webhook_url: string;
+  success_message: string;
+  submit_button_text: string;
+  theme_color: string;
+}
+
+const fieldTypes = [
+  { value: 'text', label: 'Texto', icon: FormInput },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'number', label: 'Número', icon: Hash },
+  { value: 'tel', label: 'Telefone', icon: Phone },
+  { value: 'url', label: 'URL', icon: FormInput },
+  { value: 'textarea', label: 'Texto Longo', icon: FileText },
+  { value: 'select', label: 'Lista Suspensa', icon: List },
+  { value: 'radio', label: 'Múltipla Escolha', icon: CheckSquare },
+  { value: 'checkbox', label: 'Caixas de Seleção', icon: CheckSquare },
+  { value: 'date', label: 'Data', icon: Calendar },
+  { value: 'time', label: 'Hora', icon: Clock },
+  { value: 'file', label: 'Upload de Arquivo', icon: Upload },
+];
+
+const CreateEditForm = () => {
+  const { formId } = useParams();
+  const isEditing = Boolean(formId);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Form state
+  const [formData, setFormData] = useState<FormData>({
+    title: '',
+    description: '',
+    slug: '',
+    is_published: false,
+    allow_multiple_submissions: true,
+    show_progress_bar: false,
+    require_login: false,
+    webhook_url: '',
+    success_message: 'Obrigado por sua resposta!',
+    submit_button_text: 'Enviar',
+    theme_color: '#6366f1',
+  });
+
+  const [fields, setFields] = useState<FormField[]>([]);
+  const [activeTab, setActiveTab] = useState<'fields' | 'settings'>('fields');
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        
+        if (!session?.user) {
+          navigate('/auth');
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      if (!session?.user) {
+        navigate('/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (isEditing && user) {
+      loadFormData();
+    }
+  }, [isEditing, user, formId]);
+
+  const loadFormData = async () => {
+    try {
+      const { data: formData, error: formError } = await supabase
+        .from('forms')
+        .select('*')
+        .eq('id', formId)
+        .single();
+
+      if (formError) throw formError;
+
+      setFormData({
+        title: formData.title,
+        description: formData.description || '',
+        slug: formData.slug,
+        is_published: formData.is_published,
+        allow_multiple_submissions: formData.allow_multiple_submissions,
+        show_progress_bar: formData.show_progress_bar,
+        require_login: formData.require_login,
+        webhook_url: formData.webhook_url || '',
+        success_message: formData.success_message,
+        submit_button_text: formData.submit_button_text,
+        theme_color: formData.theme_color,
+      });
+
+      const { data: fieldsData, error: fieldsError } = await supabase
+        .from('form_fields')
+        .select('*')
+        .eq('form_id', formId)
+        .order('order_index');
+
+      if (fieldsError) throw fieldsError;
+
+      setFields(fieldsData.map(field => ({
+        id: field.id,
+        type: field.type,
+        label: field.label,
+        description: field.description || '',
+        placeholder: field.placeholder || '',
+        is_required: field.is_required,
+        options: Array.isArray(field.options) ? field.options.map(String) : [],
+        order_index: field.order_index,
+      })));
+
+    } catch (error) {
+      console.error('Error loading form:', error);
+      toast({
+        title: "Erro ao carregar formulário",
+        description: "Não foi possível carregar os dados do formulário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
+  const handleTitleChange = (title: string) => {
+    setFormData(prev => ({
+      ...prev,
+      title,
+      slug: prev.slug || generateSlug(title)
+    }));
+  };
+
+  const addField = (type: string) => {
+    const newField: FormField = {
+      id: `temp-${Date.now()}`,
+      type,
+      label: `Nova pergunta ${type}`,
+      description: '',
+      placeholder: '',
+      is_required: false,
+      options: ['select', 'radio', 'checkbox'].includes(type) ? ['Opção 1', 'Opção 2'] : [],
+      order_index: fields.length,
+    };
+    setFields([...fields, newField]);
+  };
+
+  const updateField = (id: string, updates: Partial<FormField>) => {
+    setFields(fields.map(field => 
+      field.id === id ? { ...field, ...updates } : field
+    ));
+  };
+
+  const removeField = (id: string) => {
+    setFields(fields.filter(field => field.id !== id));
+  };
+
+  const moveField = (fromIndex: number, toIndex: number) => {
+    const newFields = [...fields];
+    const [removed] = newFields.splice(fromIndex, 1);
+    newFields.splice(toIndex, 0, removed);
+    
+    // Update order_index
+    const updatedFields = newFields.map((field, index) => ({
+      ...field,
+      order_index: index
+    }));
+    
+    setFields(updatedFields);
+  };
+
+  const saveForm = async () => {
+    if (!formData.title.trim()) {
+      toast({
+        title: "Título obrigatório",
+        description: "Por favor, insira um título para o formulário.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let formToSave = {
+        ...formData,
+        user_id: user?.id,
+        slug: formData.slug || generateSlug(formData.title),
+      };
+
+      let savedFormId = formId;
+
+      if (isEditing) {
+        const { error: formError } = await supabase
+          .from('forms')
+          .update(formToSave)
+          .eq('id', formId);
+
+        if (formError) throw formError;
+      } else {
+        const { data: newForm, error: formError } = await supabase
+          .from('forms')
+          .insert([formToSave])
+          .select()
+          .single();
+
+        if (formError) throw formError;
+        savedFormId = newForm.id;
+      }
+
+      // Save fields
+      if (isEditing) {
+        // Delete existing fields and insert new ones
+        await supabase
+          .from('form_fields')
+          .delete()
+          .eq('form_id', formId);
+      }
+
+      if (fields.length > 0) {
+        const fieldsToSave = fields.map(field => ({
+          form_id: savedFormId,
+          type: field.type,
+          label: field.label,
+          description: field.description || null,
+          placeholder: field.placeholder || null,
+          is_required: field.is_required,
+          options: field.options.length > 0 ? field.options : null,
+          order_index: field.order_index,
+        }));
+
+        const { error: fieldsError } = await supabase
+          .from('form_fields')
+          .insert(fieldsToSave);
+
+        if (fieldsError) throw fieldsError;
+      }
+
+      toast({
+        title: isEditing ? "Formulário atualizado!" : "Formulário criado!",
+        description: isEditing ? "As alterações foram salvas com sucesso." : "Seu formulário foi criado com sucesso.",
+      });
+
+      navigate('/dashboard');
+
+    } catch (error) {
+      console.error('Error saving form:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o formulário. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-form-builder-bg to-accent/20">
+      {/* Header */}
+      <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/dashboard')}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao Dashboard
+            </Button>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center">
+                <FormInput className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
+                Gita Responses
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="outline" 
+              onClick={() => formData.is_published && window.open(`/form/${formData.slug}`, '_blank')}
+              disabled={!formData.is_published}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Visualizar
+            </Button>
+            <Button 
+              onClick={saveForm}
+              disabled={saving}
+              className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary"
+            >
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isEditing ? 'Salvar Alterações' : 'Salvar Formulário'}
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Form Builder */}
+          <div className="lg:col-span-2">
+            <Card className="border border-form-field-border bg-gradient-to-br from-card to-form-field-bg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{isEditing ? 'Editar Formulário' : 'Criar Novo Formulário'}</CardTitle>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant={activeTab === 'fields' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setActiveTab('fields')}
+                    >
+                      Campos
+                    </Button>
+                    <Button
+                      variant={activeTab === 'settings' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setActiveTab('settings')}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configurações
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {activeTab === 'fields' ? (
+                  <div className="space-y-6">
+                    {/* Form Basic Info */}
+                    <div className="space-y-4 p-4 border border-form-field-border rounded-lg bg-form-field-bg">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Título do Formulário *</Label>
+                        <Input
+                          id="title"
+                          value={formData.title}
+                          onChange={(e) => handleTitleChange(e.target.value)}
+                          placeholder="Digite o título do seu formulário"
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Descrição</Label>
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Descreva o propósito do seu formulário"
+                          className="bg-background"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="slug">URL do Formulário</Label>
+                        <div className="flex">
+                          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-form-field-border bg-muted text-muted-foreground text-sm">
+                            {window.location.origin}/form/
+                          </span>
+                          <Input
+                            id="slug"
+                            value={formData.slug}
+                            onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                            placeholder="meu-formulario"
+                            className="bg-background rounded-l-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Form Fields */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Campos do Formulário</h3>
+                      
+                      {fields.map((field, index) => (
+                        <FieldEditor
+                          key={field.id}
+                          field={field}
+                          onUpdate={(updates) => updateField(field.id, updates)}
+                          onRemove={() => removeField(field.id)}
+                          onMoveUp={index > 0 ? () => moveField(index, index - 1) : undefined}
+                          onMoveDown={index < fields.length - 1 ? () => moveField(index, index + 1) : undefined}
+                        />
+                      ))}
+
+                      {fields.length === 0 && (
+                        <div className="text-center py-8 border-2 border-dashed border-form-field-border rounded-lg">
+                          <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground mb-4">
+                            Seu formulário ainda não tem campos. Adicione o primeiro!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <FormSettings
+                    formData={formData}
+                    onUpdate={setFormData}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {activeTab === 'fields' && (
+              <Card className="border border-form-field-border bg-gradient-to-br from-card to-form-field-bg">
+                <CardHeader>
+                  <CardTitle className="text-base">Adicionar Campo</CardTitle>
+                  <CardDescription>
+                    Clique em um tipo de campo para adicionar
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2">
+                    {fieldTypes.map((fieldType) => {
+                      const Icon = fieldType.icon;
+                      return (
+                        <Button
+                          key={fieldType.value}
+                          variant="outline"
+                          onClick={() => addField(fieldType.value)}
+                          className="h-auto p-3 flex flex-col items-center space-y-2 hover:border-primary/50"
+                        >
+                          <Icon className="w-5 h-5" />
+                          <span className="text-xs">{fieldType.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="border border-form-field-border bg-gradient-to-br from-card to-form-field-bg">
+              <CardHeader>
+                <CardTitle className="text-base">Status da Publicação</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {formData.is_published ? 'Publicado' : 'Rascunho'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.is_published 
+                        ? 'Seu formulário está ativo e recebendo respostas'
+                        : 'Seu formulário está salvo como rascunho'
+                      }
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.is_published}
+                    onCheckedChange={(checked) => 
+                      setFormData(prev => ({ ...prev, is_published: checked }))
+                    }
+                  />
+                </div>
+                {formData.is_published && formData.slug && (
+                  <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-lg">
+                    <p className="text-xs font-medium text-success-foreground mb-2">
+                      Link do formulário:
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <code className="text-xs bg-background px-2 py-1 rounded flex-1 overflow-hidden">
+                        {window.location.origin}/form/{formData.slug}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/form/${formData.slug}`);
+                          toast({ title: "Link copiado!" });
+                        }}
+                      >
+                        Copiar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// Field Editor Component
+const FieldEditor = ({ 
+  field, 
+  onUpdate, 
+  onRemove, 
+  onMoveUp, 
+  onMoveDown 
+}: {
+  field: FormField;
+  onUpdate: (updates: Partial<FormField>) => void;
+  onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+}) => {
+  const [showOptions, setShowOptions] = useState(['select', 'radio', 'checkbox'].includes(field.type));
+
+  const addOption = () => {
+    const newOptions = [...field.options, `Opção ${field.options.length + 1}`];
+    onUpdate({ options: newOptions });
+  };
+
+  const updateOption = (index: number, value: string) => {
+    const newOptions = [...field.options];
+    newOptions[index] = value;
+    onUpdate({ options: newOptions });
+  };
+
+  const removeOption = (index: number) => {
+    const newOptions = field.options.filter((_, i) => i !== index);
+    onUpdate({ options: newOptions });
+  };
+
+  return (
+    <div className="p-4 border border-form-field-border rounded-lg bg-form-field-bg space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+          <Badge variant="outline">{fieldTypes.find(t => t.value === field.type)?.label}</Badge>
+        </div>
+        <div className="flex items-center space-x-2">
+          {onMoveUp && (
+            <Button variant="ghost" size="sm" onClick={onMoveUp}>
+              ↑
+            </Button>
+          )}
+          {onMoveDown && (
+            <Button variant="ghost" size="sm" onClick={onMoveDown}>
+              ↓
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onRemove}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Pergunta *</Label>
+          <Input
+            value={field.label}
+            onChange={(e) => onUpdate({ label: e.target.value })}
+            placeholder="Digite sua pergunta"
+            className="bg-background"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Texto de ajuda</Label>
+          <Input
+            value={field.description}
+            onChange={(e) => onUpdate({ description: e.target.value })}
+            placeholder="Explicação opcional"
+            className="bg-background"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Placeholder</Label>
+        <Input
+          value={field.placeholder}
+          onChange={(e) => onUpdate({ placeholder: e.target.value })}
+          placeholder="Ex: Digite seu nome completo"
+          className="bg-background"
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id={`required-${field.id}`}
+          checked={field.is_required}
+          onCheckedChange={(checked) => onUpdate({ is_required: Boolean(checked) })}
+        />
+        <Label htmlFor={`required-${field.id}`}>Campo obrigatório</Label>
+      </div>
+
+      {showOptions && (
+        <div className="space-y-2">
+          <Label>Opções</Label>
+          {field.options.map((option, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <Input
+                value={option}
+                onChange={(e) => updateOption(index, e.target.value)}
+                placeholder={`Opção ${index + 1}`}
+                className="bg-background"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeOption(index)}
+                disabled={field.options.length <= 1}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={addOption}>
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Opção
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Form Settings Component
+const FormSettings = ({ 
+  formData, 
+  onUpdate 
+}: {
+  formData: FormData;
+  onUpdate: (data: FormData) => void;
+}) => {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Configurações Gerais</h3>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base">Permitir múltiplas submissões</Label>
+            <p className="text-sm text-muted-foreground">
+              Usuários podem responder o formulário mais de uma vez
+            </p>
+          </div>
+          <Switch
+            checked={formData.allow_multiple_submissions}
+            onCheckedChange={(checked) => 
+              onUpdate({ ...formData, allow_multiple_submissions: checked })
+            }
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base">Mostrar barra de progresso</Label>
+            <p className="text-sm text-muted-foreground">
+              Exibe o progresso de preenchimento do formulário
+            </p>
+          </div>
+          <Switch
+            checked={formData.show_progress_bar}
+            onCheckedChange={(checked) => 
+              onUpdate({ ...formData, show_progress_bar: checked })
+            }
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base">Exigir login</Label>
+            <p className="text-sm text-muted-foreground">
+              Apenas usuários logados podem responder
+            </p>
+          </div>
+          <Switch
+            checked={formData.require_login}
+            onCheckedChange={(checked) => 
+              onUpdate({ ...formData, require_login: checked })
+            }
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Mensagens e Textos</h3>
+        
+        <div className="space-y-2">
+          <Label>Mensagem de sucesso</Label>
+          <Textarea
+            value={formData.success_message}
+            onChange={(e) => onUpdate({ ...formData, success_message: e.target.value })}
+            placeholder="Mensagem exibida após o envio"
+            className="bg-background"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Texto do botão de envio</Label>
+          <Input
+            value={formData.submit_button_text}
+            onChange={(e) => onUpdate({ ...formData, submit_button_text: e.target.value })}
+            placeholder="Ex: Enviar, Cadastrar, Confirmar"
+            className="bg-background"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Integrações</h3>
+        
+        <div className="space-y-2">
+          <Label>Webhook URL</Label>
+          <Input
+            value={formData.webhook_url}
+            onChange={(e) => onUpdate({ ...formData, webhook_url: e.target.value })}
+            placeholder="https://exemplo.com/webhook"
+            className="bg-background"
+          />
+          <p className="text-xs text-muted-foreground">
+            URL que receberá os dados quando o formulário for enviado
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Aparência</h3>
+        
+        <div className="space-y-2">
+          <Label>Cor do tema</Label>
+          <div className="flex items-center space-x-4">
+            <Input
+              type="color"
+              value={formData.theme_color}
+              onChange={(e) => onUpdate({ ...formData, theme_color: e.target.value })}
+              className="w-20 h-10 bg-background"
+            />
+            <Input
+              value={formData.theme_color}
+              onChange={(e) => onUpdate({ ...formData, theme_color: e.target.value })}
+              placeholder="#6366f1"
+              className="bg-background"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CreateEditForm;

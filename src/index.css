@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Gita Responses - Modern Form Builder Design System */
+
+@layer base {
+  :root {
+    /* Bronze/Brown Modern Palette */
+    --background: 28 20% 15%;
+    --foreground: 28 8% 95%;
+
+    --card: 28 25% 12%;
+    --card-foreground: 28 8% 95%;
+
+    --popover: 28 25% 12%;
+    --popover-foreground: 28 8% 95%;
+
+    /* Primary brand colors - Bronze theme */
+    --primary: 28 45% 35%;
+    --primary-foreground: 28 8% 95%;
+    --primary-light: 28 45% 45%;
+    --primary-dark: 28 45% 25%;
+
+    /* Secondary accent colors */
+    --secondary: 28 15% 20%;
+    --secondary-foreground: 28 8% 95%;
+
+    --muted: 28 15% 18%;
+    --muted-foreground: 28 8% 65%;
+
+    --accent: 28 35% 25%;
+    --accent-foreground: 28 8% 95%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 28 15% 25%;
+    --input: 28 15% 22%;
+    --ring: 28 45% 35%;
+
+    /* Form builder specific colors */
+    --form-builder-bg: 28 20% 15%;
+    --form-field-bg: 28 15% 20%;
+    --form-field-border: 28 15% 25%;
+    --form-field-hover: 28 15% 22%;
+    --form-field-active: 28 45% 35%;
+
+    /* Status colors */
+    --success: 142 69% 49%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 91% 62%;
+    --warning-foreground: 20 14% 4%;
+    --info: 199 95% 74%;
+    --info-foreground: 210 24% 16%;
+
+    /* Gradients for beautiful backgrounds */
+    --gradient-primary: linear-gradient(135deg, hsl(246 84% 57%), hsl(253 91% 68%));
+    --gradient-secondary: linear-gradient(135deg, hsl(246 20% 97%), hsl(240 6% 96%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(240 6% 98%));
+
+    /* Shadows for depth */
+    --shadow-sm: 0 1px 2px 0 hsl(246 84% 57% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(246 84% 57% / 0.1), 0 2px 4px -1px hsl(246 84% 57% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(246 84% 57% / 0.1), 0 4px 6px -2px hsl(246 84% 57% / 0.05);
+    --shadow-glow: 0 0 20px hsl(246 84% 57% / 0.15);
+
+    --radius: 0.75rem;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 28 25% 8%;
+    --foreground: 28 8% 95%;
+
+    --card: 28 30% 5%;
+    --card-foreground: 28 8% 95%;
+
+    --popover: 28 30% 5%;
+    --popover-foreground: 28 8% 95%;
+
+    --primary: 28 55% 45%;
+    --primary-foreground: 28 8% 95%;
+
+    --secondary: 28 20% 12%;
+    --secondary-foreground: 28 8% 95%;
+
+    --muted: 28 20% 10%;
+    --muted-foreground: 28 8% 65%;
+
+    --accent: 28 40% 20%;
+    --accent-foreground: 28 8% 95%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 28 20% 18%;
+    --input: 28 20% 15%;
+    --ring: 28 55% 45%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
