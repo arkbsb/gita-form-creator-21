@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import logoImage from "@/assets/logo.jpg";
+import logoImage from "@/assets/logo.png";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
