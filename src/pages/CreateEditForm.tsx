@@ -284,6 +284,12 @@ const CreateEditForm = () => {
   };
 
   const saveForm = async () => {
+    console.log('=== Iniciando saveForm ===');
+    console.log('formData:', formData);
+    console.log('fields:', fields);
+    console.log('isEditing:', isEditing);
+    console.log('user:', user);
+    
     if (!formData.title.trim()) {
       toast({
         title: "Título obrigatório",
@@ -301,36 +307,45 @@ const CreateEditForm = () => {
         slug: formData.slug || generateSlug(formData.title),
       };
 
+      console.log('formToSave:', formToSave);
+
       let savedFormId = formId;
 
       if (isEditing) {
+        console.log('=== Atualizando formulário existente ===');
         const { error: formError } = await supabase
           .from('forms')
           .update(formToSave)
           .eq('id', formId);
 
+        console.log('Resultado update form:', { formError });
         if (formError) throw formError;
       } else {
+        console.log('=== Criando novo formulário ===');
         const { data: newForm, error: formError } = await supabase
           .from('forms')
           .insert([formToSave])
           .select()
           .single();
 
+        console.log('Resultado insert form:', { newForm, formError });
         if (formError) throw formError;
         savedFormId = newForm.id;
       }
 
       // Save fields
       if (isEditing) {
-        // Delete existing fields and insert new ones
-        await supabase
+        console.log('=== Deletando campos existentes ===');
+        const deleteResult = await supabase
           .from('form_fields')
           .delete()
           .eq('form_id', formId);
+        
+        console.log('Resultado delete fields:', deleteResult);
       }
 
       if (fields.length > 0) {
+        console.log('=== Salvando campos ===');
         const fieldsToSave = fields.map(field => ({
           form_id: savedFormId,
           type: field.type,
@@ -342,11 +357,14 @@ const CreateEditForm = () => {
           order_index: field.order_index,
         }));
 
+        console.log('fieldsToSave:', fieldsToSave);
+
         const { error: fieldsError } = await supabase
           .from('form_fields')
           .insert(fieldsToSave);
 
-      if (fieldsError) throw fieldsError;
+        console.log('Resultado insert fields:', { fieldsError });
+        if (fieldsError) throw fieldsError;
       }
 
       toast({
