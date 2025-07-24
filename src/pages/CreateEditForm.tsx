@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, 
   Plus, 
@@ -24,7 +25,9 @@ import {
   FileText,
   List,
   CheckSquare,
-  Upload
+  Upload,
+  Edit,
+  Palette
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -55,6 +58,19 @@ interface FormData {
   success_message: string;
   submit_button_text: string;
   theme_color: string;
+  // Mensagem de boas-vindas
+  welcome_enabled: boolean;
+  welcome_title: string;
+  welcome_description: string;
+  welcome_button_text: string;
+  // Controle de respostas
+  responses_paused: boolean;
+  pause_message: string;
+  // Personalização de estilo
+  button_color: string;
+  question_color: string;
+  answer_color: string;
+  background_color: string;
 }
 
 const fieldTypes = [
@@ -94,11 +110,25 @@ const CreateEditForm = () => {
     webhook_url: '',
     success_message: 'Obrigado por sua resposta!',
     submit_button_text: 'Enviar',
-    theme_color: '#6366f1',
+    theme_color: '#718570',
+    // Mensagem de boas-vindas
+    welcome_enabled: false,
+    welcome_title: 'Bem-vindo!',
+    welcome_description: 'Por favor, preencha o formulário abaixo.',
+    welcome_button_text: 'Começar',
+    // Controle de respostas
+    responses_paused: false,
+    pause_message: 'Este formulário não está recebendo respostas no momento.',
+    // Personalização de estilo  
+    button_color: '#718570',
+    question_color: '#181818',
+    answer_color: '#364636',
+    background_color: '#FFFFFF',
   });
 
   const [fields, setFields] = useState<FormField[]>([]);
   const [activeTab, setActiveTab] = useState<'fields' | 'settings'>('fields');
+  const [editorTab, setEditorTab] = useState<'editor' | 'options'>('editor');
 
   useEffect(() => {
     // Set up auth state listener
@@ -155,6 +185,16 @@ const CreateEditForm = () => {
         success_message: formData.success_message,
         submit_button_text: formData.submit_button_text,
         theme_color: formData.theme_color,
+        welcome_enabled: (formData as any).welcome_enabled || false,
+        welcome_title: (formData as any).welcome_title || 'Bem-vindo!',
+        welcome_description: (formData as any).welcome_description || 'Por favor, preencha o formulário abaixo.',
+        welcome_button_text: (formData as any).welcome_button_text || 'Começar',
+        responses_paused: (formData as any).responses_paused || false,
+        pause_message: (formData as any).pause_message || 'Este formulário não está recebendo respostas no momento.',
+        button_color: (formData as any).button_color || '#718570',
+        question_color: (formData as any).question_color || '#181818',
+        answer_color: (formData as any).answer_color || '#364636',
+        background_color: (formData as any).background_color || '#FFFFFF',
       });
 
       const { data: fieldsData, error: fieldsError } = await supabase
@@ -415,74 +455,272 @@ const CreateEditForm = () => {
                     </Button>
                   </div>
                 </div>
+                {activeTab === 'fields' && (
+                  <div className="mt-4">
+                    <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'editor' | 'options')} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="editor" className="flex items-center space-x-2">
+                          <Edit className="w-4 h-4" />
+                          <span>Editor</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="options" className="flex items-center space-x-2">
+                          <Palette className="w-4 h-4" />
+                          <span>Opções</span>
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {activeTab === 'fields' ? (
-                  <div className="space-y-6">
-                    {/* Form Basic Info */}
-                    <div className="space-y-4 p-4 border border-form-field-border rounded-lg bg-form-field-bg">
-                      <div className="space-y-2">
-                        <Label htmlFor="title">Título do Formulário *</Label>
-                        <Input
-                          id="title"
-                          value={formData.title}
-                          onChange={(e) => handleTitleChange(e.target.value)}
-                          placeholder="Digite o título do seu formulário"
-                          className="bg-background"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Descrição</Label>
-                        <Textarea
-                          id="description"
-                          value={formData.description}
-                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                          placeholder="Descreva o propósito do seu formulário"
-                          className="bg-background"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="slug">URL do Formulário</Label>
-                        <div className="flex">
-                          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-form-field-border bg-muted text-muted-foreground text-sm">
-                            {window.location.origin}/form/
-                          </span>
-                          <Input
-                            id="slug"
-                            value={formData.slug}
-                            onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                            placeholder="meu-formulario"
-                            className="bg-background rounded-l-none"
+                  <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'editor' | 'options')} className="w-full">
+                    <TabsContent value="editor" className="space-y-6">
+                      {/* Mensagem de Boas-Vindas */}
+                      <div className="space-y-4 p-4 border border-form-field-border rounded-lg bg-form-field-bg">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold">Mensagem de Boas-Vindas</h3>
+                          <Switch
+                            checked={formData.welcome_enabled}
+                            onCheckedChange={(checked) => 
+                              setFormData(prev => ({ ...prev, welcome_enabled: checked }))
+                            }
                           />
                         </div>
+                        
+                        {formData.welcome_enabled && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="welcome-title">Título da mensagem</Label>
+                              <Input
+                                id="welcome-title"
+                                value={formData.welcome_title}
+                                onChange={(e) => setFormData(prev => ({ ...prev, welcome_title: e.target.value }))}
+                                placeholder="Bem-vindo!"
+                                className="bg-background"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="welcome-description">Descrição/Instruções</Label>
+                              <Textarea
+                                id="welcome-description"
+                                value={formData.welcome_description}
+                                onChange={(e) => setFormData(prev => ({ ...prev, welcome_description: e.target.value }))}
+                                placeholder="Por favor, preencha o formulário abaixo."
+                                className="bg-background"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="welcome-button">Texto do botão</Label>
+                              <Input
+                                id="welcome-button"
+                                value={formData.welcome_button_text}
+                                onChange={(e) => setFormData(prev => ({ ...prev, welcome_button_text: e.target.value }))}
+                                placeholder="Começar"
+                                className="bg-background"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
 
-                    {/* Form Fields */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Campos do Formulário</h3>
-                      
-                      {fields.map((field, index) => (
-                        <FieldEditor
-                          key={field.id}
-                          field={field}
-                          onUpdate={(updates) => updateField(field.id, updates)}
-                          onRemove={() => removeField(field.id)}
-                          onMoveUp={index > 0 ? () => moveField(index, index - 1) : undefined}
-                          onMoveDown={index < fields.length - 1 ? () => moveField(index, index + 1) : undefined}
-                        />
-                      ))}
-
-                      {fields.length === 0 && (
-                        <div className="text-center py-8 border-2 border-dashed border-form-field-border rounded-lg">
-                          <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-muted-foreground mb-4">
-                            Seu formulário ainda não tem campos. Adicione o primeiro!
-                          </p>
+                      {/* Controle de Respostas */}
+                      <div className="space-y-4 p-4 border border-form-field-border rounded-lg bg-form-field-bg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold">Controle de Respostas</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Pause temporariamente o recebimento de novas respostas
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formData.responses_paused}
+                            onCheckedChange={(checked) => 
+                              setFormData(prev => ({ ...prev, responses_paused: checked }))
+                            }
+                          />
                         </div>
-                      )}
-                    </div>
-                  </div>
+                        
+                        {formData.responses_paused && (
+                          <div className="space-y-2">
+                            <Label htmlFor="pause-message">Mensagem para usuários</Label>
+                            <Textarea
+                              id="pause-message"
+                              value={formData.pause_message}
+                              onChange={(e) => setFormData(prev => ({ ...prev, pause_message: e.target.value }))}
+                              placeholder="Este formulário não está recebendo respostas no momento."
+                              className="bg-background"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Form Basic Info */}
+                      <div className="space-y-4 p-4 border border-form-field-border rounded-lg bg-form-field-bg">
+                        <div className="space-y-2">
+                          <Label htmlFor="title">Título do Formulário *</Label>
+                          <Input
+                            id="title"
+                            value={formData.title}
+                            onChange={(e) => handleTitleChange(e.target.value)}
+                            placeholder="Digite o título do seu formulário"
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Descrição</Label>
+                          <Textarea
+                            id="description"
+                            value={formData.description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Descreva o propósito do seu formulário"
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="slug">URL do Formulário</Label>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-form-field-border bg-muted text-muted-foreground text-sm">
+                              {window.location.origin}/form/
+                            </span>
+                            <Input
+                              id="slug"
+                              value={formData.slug}
+                              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                              placeholder="meu-formulario"
+                              className="bg-background rounded-l-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Form Fields */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Campos do Formulário</h3>
+                        
+                        {fields.map((field, index) => (
+                          <FieldEditor
+                            key={field.id}
+                            field={field}
+                            onUpdate={(updates) => updateField(field.id, updates)}
+                            onRemove={() => removeField(field.id)}
+                            onMoveUp={index > 0 ? () => moveField(index, index - 1) : undefined}
+                            onMoveDown={index < fields.length - 1 ? () => moveField(index, index + 1) : undefined}
+                          />
+                        ))}
+
+                        {fields.length === 0 && (
+                          <div className="text-center py-8 border-2 border-dashed border-form-field-border rounded-lg">
+                            <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground mb-4">
+                              Seu formulário ainda não tem campos. Adicione o primeiro!
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="options" className="space-y-6">
+                      {/* Personalizar Estilo */}
+                      <div className="space-y-4 p-4 border border-form-field-border rounded-lg bg-form-field-bg">
+                        <h3 className="text-lg font-semibold">Personalizar Estilo</h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="button-color">Cor do Botão</Label>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="color"
+                                value={formData.button_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, button_color: e.target.value }))}
+                                className="w-16 h-10 bg-background border"
+                              />
+                              <Input
+                                value={formData.button_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, button_color: e.target.value }))}
+                                placeholder="#718570"
+                                className="bg-background"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="question-color">Cor da Pergunta</Label>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="color"
+                                value={formData.question_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, question_color: e.target.value }))}
+                                className="w-16 h-10 bg-background border"
+                              />
+                              <Input
+                                value={formData.question_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, question_color: e.target.value }))}
+                                placeholder="#181818"
+                                className="bg-background"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="answer-color">Cor da Resposta</Label>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="color"
+                                value={formData.answer_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, answer_color: e.target.value }))}
+                                className="w-16 h-10 bg-background border"
+                              />
+                              <Input
+                                value={formData.answer_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, answer_color: e.target.value }))}
+                                placeholder="#364636"
+                                className="bg-background"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="background-color">Cor de Fundo</Label>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="color"
+                                value={formData.background_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, background_color: e.target.value }))}
+                                className="w-16 h-10 bg-background border"
+                              />
+                              <Input
+                                value={formData.background_color}
+                                onChange={(e) => setFormData(prev => ({ ...prev, background_color: e.target.value }))}
+                                placeholder="#FFFFFF"
+                                className="bg-background"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div className="mt-6 p-4 border border-form-field-border rounded-lg" style={{ backgroundColor: formData.background_color }}>
+                          <h4 className="text-sm font-medium mb-3">Preview das Cores</h4>
+                          <div className="space-y-3">
+                            <div style={{ color: formData.question_color }} className="font-medium">
+                              Como você avalia nosso serviço?
+                            </div>
+                            <div style={{ color: formData.answer_color }}>
+                              Esta é uma resposta de exemplo
+                            </div>
+                            <Button 
+                              size="sm" 
+                              style={{ backgroundColor: formData.button_color, color: '#FFFFFF' }}
+                              className="hover:opacity-90"
+                            >
+                              {formData.submit_button_text}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 ) : (
                   <FormSettings
                     formData={formData}
