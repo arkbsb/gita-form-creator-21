@@ -175,28 +175,43 @@ const CreateEditForm = () => {
 
       if (formError) throw formError;
 
+      // Extrair configurações extras do webhook_url JSON
+      let extraSettings: any = {};
+      let webhookUrl = formData.webhook_url || '';
+      
+      try {
+        if (formData.webhook_url && formData.webhook_url.startsWith('{')) {
+          const parsedData = JSON.parse(formData.webhook_url);
+          extraSettings = parsedData.settings || {};
+          webhookUrl = (extraSettings as any).original_webhook_url || (parsedData as any).url || '';
+        }
+      } catch (error) {
+        // Se não conseguir fazer parse, usar como string simples
+        webhookUrl = formData.webhook_url || '';
+      }
+
       setFormData({
         title: formData.title,
         description: formData.description || '',
         slug: formData.slug,
         is_published: formData.is_published,
-        allow_multiple_submissions: formData.allow_multiple_submissions,
-        show_progress_bar: formData.show_progress_bar,
-        require_login: formData.require_login,
-        webhook_url: formData.webhook_url || '',
-        success_message: formData.success_message,
-        submit_button_text: formData.submit_button_text,
-        theme_color: formData.theme_color,
-        welcome_enabled: (formData as any).welcome_enabled || false,
-        welcome_title: (formData as any).welcome_title || 'Bem-vindo!',
-        welcome_description: (formData as any).welcome_description || 'Por favor, preencha o formulário abaixo.',
-        welcome_button_text: (formData as any).welcome_button_text || 'Começar',
-        responses_paused: (formData as any).responses_paused || false,
-        pause_message: (formData as any).pause_message || 'Este formulário não está recebendo respostas no momento.',
-        button_color: (formData as any).button_color || '#718570',
-        question_color: (formData as any).question_color || '#181818',
-        answer_color: (formData as any).answer_color || '#364636',
-        background_color: (formData as any).background_color || '#FFFFFF',
+        allow_multiple_submissions: extraSettings.allow_multiple_submissions ?? formData.allow_multiple_submissions,
+        show_progress_bar: extraSettings.show_progress_bar ?? formData.show_progress_bar,
+        require_login: extraSettings.require_login ?? formData.require_login,
+        webhook_url: webhookUrl,
+        success_message: extraSettings.success_message || formData.success_message,
+        submit_button_text: extraSettings.submit_button_text || formData.submit_button_text,
+        theme_color: extraSettings.theme_color || formData.theme_color,
+        welcome_enabled: extraSettings.welcome_enabled || false,
+        welcome_title: extraSettings.welcome_title || 'Bem-vindo!',
+        welcome_description: extraSettings.welcome_description || 'Por favor, preencha o formulário abaixo.',
+        welcome_button_text: extraSettings.welcome_button_text || 'Começar',
+        responses_paused: extraSettings.responses_paused || false,
+        pause_message: extraSettings.pause_message || 'Este formulário não está recebendo respostas no momento.',
+        button_color: extraSettings.button_color || '#718570',
+        question_color: extraSettings.question_color || '#181818',
+        answer_color: extraSettings.answer_color || '#364636',
+        background_color: extraSettings.background_color || '#FFFFFF',
       });
 
       const { data: fieldsData, error: fieldsError } = await supabase
@@ -284,11 +299,6 @@ const CreateEditForm = () => {
   };
 
   const saveForm = async () => {
-    console.log('=== Iniciando saveForm ===');
-    console.log('formData:', formData);
-    console.log('fields:', fields);
-    console.log('isEditing:', isEditing);
-    console.log('user:', user);
     
     if (!formData.title.trim()) {
       toast({
@@ -301,51 +311,90 @@ const CreateEditForm = () => {
 
     setSaving(true);
     try {
-      let formToSave = {
-        ...formData,
-        user_id: user?.id,
+      // Separar campos que existem na tabela forms dos campos extras
+      const baseFormFields = {
+        title: formData.title,
+        description: formData.description,
+        is_published: formData.is_published,
         slug: formData.slug || generateSlug(formData.title),
+        user_id: user?.id,
       };
 
-      console.log('formToSave:', formToSave);
+      // Campos extras que serão armazenados no webhook_url como JSON
+      const extraSettings = {
+        welcome_enabled: formData.welcome_enabled,
+        welcome_title: formData.welcome_title,
+        welcome_description: formData.welcome_description,
+        welcome_button_text: formData.welcome_button_text,
+        responses_paused: formData.responses_paused,
+        pause_message: formData.pause_message,
+        button_color: formData.button_color,
+        question_color: formData.question_color,
+        answer_color: formData.answer_color,
+        background_color: formData.background_color,
+        allow_multiple_submissions: formData.allow_multiple_submissions,
+        show_progress_bar: formData.show_progress_bar,
+        require_login: formData.require_login,
+        success_message: formData.success_message,
+        submit_button_text: formData.submit_button_text,
+        theme_color: formData.theme_color,
+        original_webhook_url: formData.webhook_url,
+      };
+
+      // Tentar extrair dados existentes do webhook_url
+      let existingWebhookData = {};
+      try {
+        if (formData.webhook_url && formData.webhook_url.startsWith('{')) {
+          existingWebhookData = JSON.parse(formData.webhook_url);
+        }
+      } catch (error) {
+        // Se não conseguir fazer parse, manter como string simples
+        if (formData.webhook_url) {
+          existingWebhookData = { url: formData.webhook_url };
+        }
+      }
+
+      const updatedWebhookData = {
+        ...existingWebhookData,
+        settings: extraSettings
+      };
+
+      const formToSave = {
+        ...baseFormFields,
+        webhook_url: JSON.stringify(updatedWebhookData),
+      };
 
       let savedFormId = formId;
 
       if (isEditing) {
-        console.log('=== Atualizando formulário existente ===');
         const { error: formError } = await supabase
           .from('forms')
           .update(formToSave)
           .eq('id', formId);
 
-        console.log('Resultado update form:', { formError });
         if (formError) throw formError;
       } else {
-        console.log('=== Criando novo formulário ===');
         const { data: newForm, error: formError } = await supabase
           .from('forms')
           .insert([formToSave])
           .select()
           .single();
 
-        console.log('Resultado insert form:', { newForm, formError });
         if (formError) throw formError;
         savedFormId = newForm.id;
       }
 
       // Save fields
       if (isEditing) {
-        console.log('=== Deletando campos existentes ===');
-        const deleteResult = await supabase
+        const { error: deleteError } = await supabase
           .from('form_fields')
           .delete()
           .eq('form_id', formId);
         
-        console.log('Resultado delete fields:', deleteResult);
+        if (deleteError) throw deleteError;
       }
 
       if (fields.length > 0) {
-        console.log('=== Salvando campos ===');
         const fieldsToSave = fields.map(field => ({
           form_id: savedFormId,
           type: field.type,
@@ -357,13 +406,10 @@ const CreateEditForm = () => {
           order_index: field.order_index,
         }));
 
-        console.log('fieldsToSave:', fieldsToSave);
-
         const { error: fieldsError } = await supabase
           .from('form_fields')
           .insert(fieldsToSave);
 
-        console.log('Resultado insert fields:', { fieldsError });
         if (fieldsError) throw fieldsError;
       }
 
