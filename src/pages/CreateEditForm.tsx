@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useGoogleSheetsIntegration, FormQuestion } from "@/hooks/useGoogleSheetsIntegration";
 import { 
   ArrowLeft, 
   Plus, 
@@ -97,6 +98,7 @@ const CreateEditForm = () => {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { createSpreadsheet } = useGoogleSheetsIntegration();
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -344,13 +346,31 @@ const CreateEditForm = () => {
           .from('form_fields')
           .insert(fieldsToSave);
 
-        if (fieldsError) throw fieldsError;
+      if (fieldsError) throw fieldsError;
       }
 
       toast({
         title: isEditing ? "Formulário atualizado!" : "Formulário criado!",
         description: isEditing ? "As alterações foram salvas com sucesso." : "Seu formulário foi criado com sucesso.",
       });
+
+      // Integração automática com Google Sheets (apenas para novos formulários)
+      if (!isEditing && fields.length > 0) {
+        try {
+          const questions: FormQuestion[] = fields.map(field => ({
+            id: field.id || `temp-${field.order_index}`,
+            title: field.label,
+            type: field.type
+          }));
+
+          // Criar planilha em background (não bloquear navegação)
+          createSpreadsheet(savedFormId, formData.title, questions).catch(error => {
+            console.error('Erro na integração com Google Sheets:', error);
+          });
+        } catch (error) {
+          console.error('Erro ao configurar integração Google Sheets:', error);
+        }
+      }
 
       navigate('/dashboard');
 

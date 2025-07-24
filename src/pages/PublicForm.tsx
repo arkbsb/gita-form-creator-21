@@ -14,6 +14,7 @@ import { CheckCircle, Loader2, FormInput } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
+import { useGoogleSheetsIntegration } from "@/hooks/useGoogleSheetsIntegration";
 
 interface FormData {
   id: string;
@@ -48,6 +49,7 @@ const PublicForm = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { sendResponseToSheet, getSheetsStatus } = useGoogleSheetsIntegration();
   
   const [form, setForm] = useState<FormData | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
@@ -255,6 +257,30 @@ const PublicForm = () => {
           });
         } catch (webhookError) {
           console.error('Webhook error:', webhookError);
+        }
+      }
+
+      // Integração automática com Google Sheets
+      const sheetsStatus = getSheetsStatus(form!.webhook_url);
+      if (sheetsStatus.spreadsheetId) {
+        try {
+          const formattedResponses = fields.map(field => ({
+            questionId: field.id,
+            question: field.label,
+            answer: Array.isArray(responses[field.id]) 
+              ? (responses[field.id] as string[]).join(', ')
+              : (responses[field.id] as string) || ''
+          }));
+
+          // Enviar para Google Sheets em background
+          sendResponseToSheet(
+            sheetsStatus.spreadsheetId,
+            form!.id,
+            formattedResponses,
+            new Date().toISOString()
+          );
+        } catch (sheetsError) {
+          console.error('Erro ao sincronizar com Google Sheets:', sheetsError);
         }
       }
 

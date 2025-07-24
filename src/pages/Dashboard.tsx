@@ -21,7 +21,11 @@ import {
   Calendar,
   TrendingUp,
   Mail,
-  FileText
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
+  Sheet
 } from "lucide-react";
 import InviteManager from "@/components/InviteManager";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +33,8 @@ import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useGoogleSheetsIntegration } from "@/hooks/useGoogleSheetsIntegration";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Form {
   id: string;
@@ -38,6 +44,7 @@ interface Form {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  webhook_url: string | null;
 }
 
 interface FormField {
@@ -76,6 +83,7 @@ const Dashboard = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { getSheetsStatus, recreateSpreadsheet } = useGoogleSheetsIntegration();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -479,6 +487,66 @@ const Dashboard = () => {
                               <Badge variant={form.is_published ? "default" : "secondary"}>
                                 {form.is_published ? "Publicado" : "Rascunho"}
                               </Badge>
+                              {(() => {
+                                const sheetsStatus = getSheetsStatus(form.webhook_url);
+                                if (sheetsStatus.sheetsSyncStatus === 'pending') {
+                                  return (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Badge variant="outline" className="flex items-center gap-1">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            Criando planilha
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Criando planilha Google Sheets...</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                } else if (sheetsStatus.sheetsSyncStatus === 'success' && sheetsStatus.spreadsheetUrl) {
+                                  return (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Badge variant="outline" className="flex items-center gap-1 bg-success/10 text-success border-success/20">
+                                            <CheckCircle className="h-3 w-3" />
+                                            <a 
+                                              href={sheetsStatus.spreadsheetUrl} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer"
+                                              className="hover:underline"
+                                            >
+                                              Google Sheets
+                                            </a>
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Clique para abrir a planilha</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                } else if (sheetsStatus.sheetsSyncStatus === 'error') {
+                                  return (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Badge variant="outline" className="flex items-center gap-1 bg-destructive/10 text-destructive border-destructive/20">
+                                            <AlertTriangle className="h-3 w-3" />
+                                            Erro na planilha
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{sheetsStatus.sheetsSyncError || 'Erro ao criar planilha'}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                             {form.description && (
                               <p className="text-muted-foreground mb-2">{form.description}</p>
