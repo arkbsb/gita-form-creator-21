@@ -6,66 +6,62 @@
 
 @layer base {
   :root {
-    /* Modern Clean Palette */
+    /* Natural Palette */
     --background: 0 0% 100%;
-    --foreground: 220 39% 11%;
+    --foreground: 0 0% 9%;
 
-    --card: 220 14% 96%;
-    --card-foreground: 220 39% 11%;
+    --card: 0 2% 89%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 39% 11%;
+    --popover-foreground: 0 0% 9%;
 
     /* Primary brand colors */
-    --primary: 220 77% 40%;
+    --primary: 116 8% 48%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 220 77% 50%;
-    --primary-dark: 220 77% 30%;
 
     /* Secondary accent colors */
-    --secondary: 160 84% 39%;
+    --secondary: 23 35% 28%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 13% 46%;
+    --muted: 112 14% 67%;
+    --muted-foreground: 120 12% 24%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 39% 11%;
+    --accent: 119 11% 40%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 13 40% 29%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 77% 40%;
+    --border: 0 2% 89%;
+    --input: 0 2% 89%;
+    --ring: 116 8% 48%;
 
     /* Form builder specific colors */
     --form-builder-bg: 0 0% 100%;
-    --form-field-bg: 220 14% 96%;
-    --form-field-border: 220 13% 91%;
-    --form-field-hover: 220 13% 88%;
-    --form-field-active: 220 77% 40%;
+    --form-field-bg: 0 2% 89%;
+    --form-field-border: 0 2% 89%;
+    --form-field-hover: 112 14% 67%;
+    --form-field-active: 116 8% 48%;
 
     /* Status colors */
-    --success: 160 84% 39%;
+    --success: 116 8% 48%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 220 39% 11%;
+    --warning-foreground: 0 0% 9%;
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
     /* Gradients for beautiful backgrounds */
-    --gradient-primary: linear-gradient(135deg, hsl(220 77% 40%), hsl(220 77% 30%));
-    --gradient-secondary: linear-gradient(135deg, hsl(160 84% 39%), hsl(160 84% 30%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14% 96%));
+    --gradient-primary: linear-gradient(135deg, hsl(116 8% 48%), hsl(119 11% 40%));
+    --gradient-secondary: linear-gradient(135deg, hsl(23 35% 28%), hsl(13 40% 29%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(0 2% 89%));
 
-    /* Shadows for depth - subtle shadows as requested */
-    --shadow-sm: 0 1px 2px 0 hsl(220 39% 11% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(220 39% 11% / 0.1), 0 2px 4px -1px hsl(220 39% 11% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(220 39% 11% / 0.1), 0 4px 6px -2px hsl(220 39% 11% / 0.05);
-    --shadow-glow: 0 0 20px hsl(220 77% 40% / 0.15);
-
-    --radius: 0.75rem;
+    /* Shadows for natural depth */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 9% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 9% / 0.1), 0 2px 4px -1px hsl(0 0% 9% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 9% / 0.1), 0 4px 6px -2px hsl(0 0% 9% / 0.05);
+    --shadow-glow: 0 0 20px hsl(116 8% 48% / 0.15);
 
     --radius: 0.5rem;
 
@@ -87,33 +83,33 @@
   }
 
   .dark {
-    --background: 220 39% 11%;
+    --background: 120 12% 24%;
     --foreground: 0 0% 100%;
 
-    --card: 220 13% 18%;
+    --card: 120 12% 20%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 220 13% 18%;
+    --popover: 120 12% 20%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 220 77% 50%;
-    --primary-foreground: 220 39% 11%;
+    --primary: 116 8% 55%;
+    --primary-foreground: 120 12% 24%;
 
-    --secondary: 160 84% 45%;
-    --secondary-foreground: 220 39% 11%;
+    --secondary: 23 35% 35%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 13% 18%;
-    --muted-foreground: 220 13% 64%;
+    --muted: 120 12% 20%;
+    --muted-foreground: 112 14% 75%;
 
-    --accent: 220 13% 18%;
+    --accent: 119 11% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 13 40% 35%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 28%;
-    --input: 220 13% 28%;
-    --ring: 220 77% 50%;
+    --border: 120 12% 30%;
+    --input: 120 12% 30%;
+    --ring: 116 8% 55%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
