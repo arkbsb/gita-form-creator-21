@@ -82,24 +82,14 @@ const PublicForm = () => {
     try {
       setLoading(true);
       
-      setDebugInfo('Conectando ao Supabase...');
-      
-      // Teste básico de conexão
-      const { data: testData, error: testError } = await supabase
-        .from('forms')
-        .select('count');
-      
-      setDebugInfo(`Conexão Supabase: ${testError ? 'ERRO - ' + testError.message : 'OK - ' + testData?.length + ' registros'}`);
-      
-      // Load form data
-      setDebugInfo(`Iniciando busca...`);
+      setDebugInfo('1. Conectando ao Supabase...');
       
       // Primeiro, vamos ver todos os formulários existentes
       const { data: allForms } = await supabase
         .from('forms')
         .select('slug, title, is_published');
       
-      setDebugInfo(`Formulários existentes: ${JSON.stringify(allForms)} | Buscando slug: "${slug}"`);
+      setDebugInfo(`2. Formulários no banco: ${JSON.stringify(allForms)} | 3. Buscando slug: "${slug}"`);
       
       let { data: formData, error: formError } = await supabase
         .from('forms')
