@@ -82,99 +82,14 @@ const PublicForm = () => {
     try {
       setLoading(true);
       
-      setDebugInfo('1. Conectando ao Supabase...');
-      
-      // Primeiro, vamos ver todos os formulários existentes
+      // Listar TODOS os formulários do banco
       const { data: allForms } = await supabase
         .from('forms')
-        .select('slug, title, is_published');
+        .select('*');
       
-      setDebugInfo(`2. Formulários no banco: ${JSON.stringify(allForms)} | 3. Buscando slug: "${slug}"`);
+      setDebugInfo(`TODOS OS FORMULÁRIOS: ${JSON.stringify(allForms, null, 2)}`);
       
-      let { data: formData, error: formError } = await supabase
-        .from('forms')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_published', true)
-        .single();
-
-      setDebugInfo(`Resultado: ${formData ? 'Encontrado' : 'Não encontrado'} | Erro: ${formError?.message || 'nenhum'}`);
-
-      // Se não encontrar, tentar buscar sem filtro de publicação para debug
-      if (formError || !formData) {
-        const { data: debugFormData, error: debugError } = await supabase
-          .from('forms')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-        
-        setDebugInfo(prev => prev + ` | Debug: ${debugFormData ? `Existe mas is_published=${debugFormData.is_published}` : 'Não existe'}`);
-        
-        if (debugFormData && !debugFormData.is_published) {
-          throw new Error('Formulário não está publicado');
-        } else if (!debugFormData) {
-          throw new Error('Formulário não encontrado');
-        }
-      }
-
-      if (formError || !formData) {
-        throw new Error('Formulário não encontrado ou não está publicado');
-      }
-
-      // Parse webhook_url para extrair configurações de boas-vindas
-      let parsedFormData: FormData = formData as FormData;
-      
-      console.log('Debug - webhook_url bruto:', formData.webhook_url);
-      console.log('Debug - is_published:', formData.is_published);
-      
-      if (formData.webhook_url) {
-        try {
-          const webhookData = JSON.parse(formData.webhook_url);
-          console.log('Debug - webhookData parseado:', webhookData);
-          
-          if (typeof webhookData === 'object' && webhookData !== null) {
-            // Extrair configurações de boas-vindas do JSON
-            parsedFormData = {
-              ...formData,
-              welcome_enabled: webhookData.welcome_enabled || false,
-              welcome_title: webhookData.welcome_title || 'Bem-vindo!',
-              welcome_description: webhookData.welcome_description || 'Por favor, preencha o formulário abaixo.',
-              welcome_button_text: webhookData.welcome_button_text || 'Começar'
-            } as FormData;
-            
-            console.log('Debug - configurações de boas-vindas extraídas:', {
-              welcome_enabled: parsedFormData.welcome_enabled,
-              welcome_title: parsedFormData.welcome_title,
-              welcome_description: parsedFormData.welcome_description,
-              welcome_button_text: parsedFormData.welcome_button_text
-            });
-          }
-        } catch (error) {
-          // Se não conseguir fazer parse, mantém os dados originais
-          console.log('Debug - webhook URL não é JSON válido, usando configurações padrão:', error);
-          console.log('Debug - webhook_url que falhou no parse:', formData.webhook_url);
-        }
-      } else {
-        console.log('Debug - webhook_url é null/undefined');
-      }
-
-      setForm(parsedFormData);
-
-      // Load form fields
-      const { data: fieldsData, error: fieldsError } = await supabase
-        .from('form_fields')
-        .select('*')
-        .eq('form_id', formData.id)
-        .order('order_index');
-
-      if (fieldsError) {
-        throw fieldsError;
-      }
-
-      setFields(fieldsData.map(field => ({
-        ...field,
-        options: Array.isArray(field.options) ? field.options.map(String) : null,
-      })));
+      return; // Para por aqui para ver os dados
 
     } catch (error) {
       console.error('Error loading form:', error);
