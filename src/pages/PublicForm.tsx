@@ -112,6 +112,7 @@ const PublicForm = () => {
 
       // Parse webhook_url para extrair configurações de boas-vindas
       let parsedFormData: FormData = formData as FormData;
+      console.log('🔍 webhook_url original:', formData.webhook_url);
       
       if (formData.webhook_url) {
         try {
@@ -131,6 +132,10 @@ const PublicForm = () => {
           console.log('Debug - webhook URL não é JSON válido, usando configurações padrão:', error);
         }
       }
+
+      console.log('🔍 parsedFormData final:', parsedFormData);
+      console.log('🔍 welcome_enabled:', parsedFormData.welcome_enabled);
+      console.log('🔍 showWelcome state atual:', showWelcome);
 
       setForm(parsedFormData);
 
