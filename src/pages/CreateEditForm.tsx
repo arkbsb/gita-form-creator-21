@@ -243,20 +243,43 @@ const CreateEditForm = () => {
     }
   };
 
-  const generateSlug = (title: string) => {
-    return title
+  const generateSlug = async (title: string, excludeId?: string): Promise<string> => {
+    const baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
+    
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Verificar se o slug já existe
+    while (true) {
+      const { data: existingForm } = await supabase
+        .from('forms')
+        .select('id')
+        .eq('slug', slug)
+        .not('id', 'eq', excludeId || 'never-match')
+        .single();
+      
+      if (!existingForm) {
+        break; // Slug é único
+      }
+      
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    return slug;
   };
 
-  const handleTitleChange = (title: string) => {
+  const handleTitleChange = async (title: string) => {
+    const newSlug = formData.slug || await generateSlug(title, formId);
     setFormData(prev => ({
       ...prev,
       title,
-      slug: prev.slug || generateSlug(title)
+      slug: newSlug
     }));
   };
 
@@ -349,11 +372,13 @@ const CreateEditForm = () => {
     setSaving(true);
     try {
       // Separar campos que existem na tabela forms dos campos extras
+      const finalSlug = formData.slug || await generateSlug(formData.title, formId);
+      
       const baseFormFields = {
         title: formData.title,
         description: formData.description,
         is_published: formData.is_published,
-        slug: formData.slug || generateSlug(formData.title),
+        slug: finalSlug,
         user_id: user?.id,
       };
 
