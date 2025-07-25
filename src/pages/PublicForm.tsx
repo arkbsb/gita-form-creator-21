@@ -77,23 +77,54 @@ const PublicForm = () => {
       setLoading(true);
       
       // Load form data
-      const { data: formData, error: formError } = await supabase
+      let { data: formData, error: formError } = await supabase
         .from('forms')
         .select('*')
         .eq('slug', slug)
         .eq('is_published', true)
         .single();
 
+      console.log('Debug - resultado da consulta (published=true):', { formData, formError });
+
+      // Se não encontrar, tentar buscar sem filtro de publicação para debug
       if (formError || !formData) {
-        throw new Error('Formulário não encontrado');
+        const { data: debugFormData, error: debugError } = await supabase
+          .from('forms')
+          .select('*')
+          .eq('slug', slug)
+          .single();
+        
+        console.log('Debug - formulário existe mas não está publicado?', { 
+          debugFormData, 
+          debugError,
+          is_published: debugFormData?.is_published 
+        });
+        
+        if (debugFormData && !debugFormData.is_published) {
+          throw new Error('Formulário não está publicado');
+        } else if (!debugFormData) {
+          throw new Error('Formulário não encontrado');
+        }
+      }
+
+      if (formError || !formData) {
+        console.error('Error loading form:', formError);
+        throw new Error('Formulário não encontrado ou não está publicado');
       }
 
       // Parse webhook_url para extrair configurações de boas-vindas
       let parsedFormData: FormData = formData as FormData;
+      
+      console.log('Debug - webhook_url bruto:', formData.webhook_url);
+      console.log('Debug - is_published:', formData.is_published);
+      
       if (formData.webhook_url) {
         try {
           const webhookData = JSON.parse(formData.webhook_url);
+          console.log('Debug - webhookData parseado:', webhookData);
+          
           if (typeof webhookData === 'object' && webhookData !== null) {
+            // Extrair configurações de boas-vindas do JSON
             parsedFormData = {
               ...formData,
               welcome_enabled: webhookData.welcome_enabled || false,
@@ -101,11 +132,21 @@ const PublicForm = () => {
               welcome_description: webhookData.welcome_description || 'Por favor, preencha o formulário abaixo.',
               welcome_button_text: webhookData.welcome_button_text || 'Começar'
             } as FormData;
+            
+            console.log('Debug - configurações de boas-vindas extraídas:', {
+              welcome_enabled: parsedFormData.welcome_enabled,
+              welcome_title: parsedFormData.welcome_title,
+              welcome_description: parsedFormData.welcome_description,
+              welcome_button_text: parsedFormData.welcome_button_text
+            });
           }
         } catch (error) {
           // Se não conseguir fazer parse, mantém os dados originais
-          console.log('Webhook URL não é JSON válido, usando configurações padrão');
+          console.log('Debug - webhook URL não é JSON válido, usando configurações padrão:', error);
+          console.log('Debug - webhook_url que falhou no parse:', formData.webhook_url);
         }
+      } else {
+        console.log('Debug - webhook_url é null/undefined');
       }
 
       setForm(parsedFormData);
