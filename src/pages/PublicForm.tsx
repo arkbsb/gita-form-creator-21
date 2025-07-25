@@ -87,9 +87,15 @@ const PublicForm = () => {
         .select('*')
         .eq('slug', slug)
         .eq('is_published', true)
-        .single();
+        .maybeSingle();
 
-      if (formError || !formData) {
+      if (formError) {
+        console.error('Erro ao buscar formulário:', formError);
+        throw new Error('Erro ao buscar formulário: ' + formError.message);
+      }
+
+      if (!formData) {
+        console.log('Formulário não encontrado para slug:', slug);
         throw new Error('Formulário não encontrado ou não está publicado');
       }
 
