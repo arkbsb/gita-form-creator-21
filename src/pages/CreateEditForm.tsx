@@ -1002,7 +1002,7 @@ const CreateEditForm = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <GoogleSheetsCard formId={formId!} webhookUrl={formData.webhook_url} />
+                  <GoogleSheetsCard formId={formId!} webhookUrl={formData.webhook_url || null} />
                 </CardContent>
               </Card>
             )}
@@ -1314,14 +1314,14 @@ const FormSettings = ({
 };
 
 // Google Sheets Card Component
-const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: string }) => {
+const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: string | null }) => {
   const { toast } = useToast();
   const { getSheetsStatus } = useGoogleSheetsIntegration();
   
   const sheetsStatus = getSheetsStatus(webhookUrl);
   
   const getGoogleSheetsUrl = () => {
-    if (!sheetsStatus.spreadsheetId) return null;
+    if (!sheetsStatus?.spreadsheetId) return null;
     return `https://docs.google.com/spreadsheets/d/${sheetsStatus.spreadsheetId}/edit`;
   };
   
