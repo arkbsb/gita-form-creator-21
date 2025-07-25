@@ -331,8 +331,13 @@ const CreateEditForm = () => {
   };
 
   const saveForm = async () => {
+    console.log('🚀 Iniciando saveForm...');
+    console.log('📝 User:', user);
+    console.log('📋 Form data:', formData);
+    console.log('🔢 Fields count:', fields.length);
     
     if (!formData.title.trim()) {
+      console.log('❌ Título vazio');
       toast({
         title: "Título obrigatório",
         description: "Por favor, insira um título para o formulário.",
@@ -396,23 +401,35 @@ const CreateEditForm = () => {
         webhook_url: JSON.stringify(updatedWebhookData),
       };
 
+      console.log('💾 Dados do formulário para salvar:', formToSave);
+
       let savedFormId = formId;
 
       if (isEditing) {
+        console.log('✏️ Editando formulário existente:', formId);
         const { error: formError } = await supabase
           .from('forms')
           .update(formToSave)
           .eq('id', formId);
 
-        if (formError) throw formError;
+        if (formError) {
+          console.error('❌ Erro ao atualizar formulário:', formError);
+          throw formError;
+        }
+        console.log('✅ Formulário atualizado com sucesso');
       } else {
+        console.log('🆕 Criando novo formulário...');
         const { data: newForm, error: formError } = await supabase
           .from('forms')
           .insert([formToSave])
           .select()
           .single();
 
-        if (formError) throw formError;
+        if (formError) {
+          console.error('❌ Erro ao inserir formulário:', formError);
+          throw formError;
+        }
+        console.log('✅ Novo formulário criado:', newForm);
         savedFormId = newForm.id;
       }
 
@@ -438,11 +455,16 @@ const CreateEditForm = () => {
           order_index: field.order_index,
         }));
 
+        console.log('📝 Salvando campos:', fieldsToSave);
         const { error: fieldsError } = await supabase
           .from('form_fields')
           .insert(fieldsToSave);
 
-        if (fieldsError) throw fieldsError;
+        if (fieldsError) {
+          console.error('❌ Erro ao inserir campos:', fieldsError);
+          throw fieldsError;
+        }
+        console.log('✅ Campos salvos com sucesso');
       }
 
       toast({
@@ -471,13 +493,15 @@ const CreateEditForm = () => {
       navigate('/dashboard');
 
     } catch (error) {
-      console.error('Error saving form:', error);
+      console.error('💥 Error saving form:', error);
+      console.error('📄 Error details:', JSON.stringify(error, null, 2));
       toast({
         title: "Erro ao salvar",
-        description: "Não foi possível salvar o formulário. Tente novamente.",
+        description: `Não foi possível salvar o formulário: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 Finalizando saveForm...');
       setSaving(false);
     }
   };
