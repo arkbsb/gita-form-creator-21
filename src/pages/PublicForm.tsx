@@ -78,10 +78,14 @@ const PublicForm = () => {
   }, [slug]);
 
   const loadForm = async () => {
-    console.log('loadForm iniciado para slug:', slug);
+    console.log('🔍 loadForm iniciado para slug:', slug);
+    console.log('🔍 URL atual:', window.location.href);
+    
     try {
       setLoading(true);
+      setDebugInfo(`Buscando formulário com slug: ${slug}`);
       
+      console.log('🔍 Fazendo query no Supabase...');
       let { data: formData, error: formError } = await supabase
         .from('forms')
         .select('*')
@@ -89,15 +93,22 @@ const PublicForm = () => {
         .eq('is_published', true)
         .maybeSingle();
 
+      console.log('🔍 Resultado da query:', { formData, formError });
+
       if (formError) {
-        console.error('Erro ao buscar formulário:', formError);
+        console.error('❌ Erro ao buscar formulário:', formError);
+        setDebugInfo(`Erro: ${formError.message}`);
         throw new Error('Erro ao buscar formulário: ' + formError.message);
       }
 
       if (!formData) {
-        console.log('Formulário não encontrado para slug:', slug);
+        console.log('❌ Formulário não encontrado para slug:', slug);
+        setDebugInfo(`Formulário não encontrado para slug: ${slug}`);
         throw new Error('Formulário não encontrado ou não está publicado');
       }
+
+      console.log('✅ Formulário encontrado:', formData);
+      setDebugInfo(`Formulário encontrado: ${formData.title}`);
 
       // Parse webhook_url para extrair configurações de boas-vindas
       let parsedFormData: FormData = formData as FormData;
@@ -655,7 +666,9 @@ const PublicForm = () => {
               O formulário solicitado não existe ou não está mais disponível.
             </p>
             <div className="bg-gray-100 p-3 rounded text-sm text-left mb-4">
-              <strong>Debug:</strong> {debugInfo}
+              <strong>Debug:</strong> {debugInfo}<br/>
+              <strong>Slug:</strong> {slug}<br/>
+              <strong>URL:</strong> {window.location.href}
             </div>
             <Button onClick={() => navigate('/')}>
               Voltar ao início
