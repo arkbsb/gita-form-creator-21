@@ -988,12 +988,31 @@ const CreateEditForm = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Google Sheets Integration */}
+            {isEditing && formData.slug && (
+              <Card className="border border-form-field-border bg-gradient-to-br from-card to-form-field-bg">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center space-x-2">
+                    <FileText className="w-4 h-4" />
+                    <span>Google Sheets</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Planilha para coleta de respostas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <GoogleSheetsCard formId={formId!} webhookUrl={formData.webhook_url} />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
     </div>
   );
 };
+
 
 // Field Editor Component
 const FieldEditor = ({ 
@@ -1290,6 +1309,74 @@ const FormSettings = ({
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Google Sheets Card Component
+const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: string }) => {
+  const { toast } = useToast();
+  const { getSheetsStatus } = useGoogleSheetsIntegration();
+  
+  const sheetsStatus = getSheetsStatus(webhookUrl);
+  
+  const getGoogleSheetsUrl = () => {
+    if (!sheetsStatus.spreadsheetId) return null;
+    return `https://docs.google.com/spreadsheets/d/${sheetsStatus.spreadsheetId}/edit`;
+  };
+  
+  const sheetsUrl = getGoogleSheetsUrl();
+  
+  if (!sheetsUrl) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-sm text-muted-foreground">
+          Planilha ainda não foi criada.
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          A planilha será criada automaticamente quando o formulário receber a primeira resposta.
+        </p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center space-x-2 text-sm">
+        <div className="w-2 h-2 bg-success rounded-full"></div>
+        <span className="text-success-foreground">Planilha ativa</span>
+      </div>
+      
+      <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
+        <p className="text-xs font-medium text-success-foreground mb-2">
+          Link da planilha:
+        </p>
+        <div className="flex items-center space-x-2">
+          <code className="text-xs bg-background px-2 py-1 rounded flex-1 overflow-hidden">
+            {sheetsUrl}
+          </code>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(sheetsUrl);
+              toast({ title: "Link copiado!" });
+            }}
+          >
+            Copiar
+          </Button>
+        </div>
+      </div>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => window.open(sheetsUrl, '_blank')}
+      >
+        <ExternalLink className="w-4 h-4 mr-2" />
+        Abrir Planilha
+      </Button>
     </div>
   );
 };
