@@ -67,12 +67,17 @@ const PublicForm = () => {
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
+    console.log('PublicForm carregou! Slug:', slug);
     if (slug) {
+      console.log('Iniciando loadForm para slug:', slug);
       loadForm();
+    } else {
+      console.log('Slug não encontrado na URL');
     }
   }, [slug]);
 
   const loadForm = async () => {
+    console.log('loadForm iniciado para slug:', slug);
     try {
       setLoading(true);
       
