@@ -51,6 +51,7 @@ interface FieldResponse {
 }
 
 const PublicForm = () => {
+  console.log('=== PUBLICFORM COMPONENT CARREGADO ===');
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
