@@ -83,7 +83,14 @@ const PublicForm = () => {
       setLoading(true);
       
       // Load form data
-      setDebugInfo(`Buscando formulário com slug: ${slug}`);
+      setDebugInfo(`Buscando formulário com slug: "${slug}"`);
+      
+      // Primeiro, vamos ver todos os formulários existentes
+      const { data: allForms } = await supabase
+        .from('forms')
+        .select('slug, title, is_published');
+      
+      setDebugInfo(prev => prev + ` | Formulários existentes: ${JSON.stringify(allForms)}`);
       
       let { data: formData, error: formError } = await supabase
         .from('forms')
