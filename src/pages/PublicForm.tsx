@@ -82,6 +82,15 @@ const PublicForm = () => {
     try {
       setLoading(true);
       
+      setDebugInfo('Conectando ao Supabase...');
+      
+      // Teste básico de conexão
+      const { data: testData, error: testError } = await supabase
+        .from('forms')
+        .select('count');
+      
+      setDebugInfo(`Conexão Supabase: ${testError ? 'ERRO - ' + testError.message : 'OK - ' + testData?.length + ' registros'}`);
+      
       // Load form data
       setDebugInfo(`Iniciando busca...`);
       
