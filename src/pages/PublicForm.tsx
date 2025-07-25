@@ -175,12 +175,13 @@ const PublicForm = () => {
 
     } catch (error) {
       console.error('Error loading form:', error);
+      console.error('Detalhes do erro:', error);
       toast({
         title: "Erro ao carregar formulário",
         description: "O formulário solicitado não foi encontrado ou não está publicado.",
         variant: "destructive",
       });
-      navigate('/');
+      // Removido navigate('/') para mostrar erro na tela
     } finally {
       setLoading(false);
     }
