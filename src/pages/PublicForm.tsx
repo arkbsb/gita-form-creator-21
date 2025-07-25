@@ -28,6 +28,11 @@ interface FormData {
   allow_multiple_submissions: boolean;
   is_published: boolean;
   webhook_url: string | null;
+  // Campos de boas-vindas
+  welcome_enabled?: boolean;
+  welcome_title?: string;
+  welcome_description?: string;
+  welcome_button_text?: string;
 }
 
 interface FormField {
@@ -59,6 +64,7 @@ const PublicForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [errors, setErrors] = useState<{ [fieldId: string]: string }>({});
+  const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
     if (slug) {
@@ -82,7 +88,27 @@ const PublicForm = () => {
         throw new Error('Formulário não encontrado');
       }
 
-      setForm(formData);
+      // Parse webhook_url para extrair configurações de boas-vindas
+      let parsedFormData: FormData = formData as FormData;
+      if (formData.webhook_url) {
+        try {
+          const webhookData = JSON.parse(formData.webhook_url);
+          if (typeof webhookData === 'object' && webhookData !== null) {
+            parsedFormData = {
+              ...formData,
+              welcome_enabled: webhookData.welcome_enabled || false,
+              welcome_title: webhookData.welcome_title || 'Bem-vindo!',
+              welcome_description: webhookData.welcome_description || 'Por favor, preencha o formulário abaixo.',
+              welcome_button_text: webhookData.welcome_button_text || 'Começar'
+            } as FormData;
+          }
+        } catch (error) {
+          // Se não conseguir fazer parse, mantém os dados originais
+          console.log('Webhook URL não é JSON válido, usando configurações padrão');
+        }
+      }
+
+      setForm(parsedFormData);
 
       // Load form fields
       const { data: fieldsData, error: fieldsError } = await supabase
@@ -649,6 +675,40 @@ const PublicForm = () => {
             )}
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Mostrar tela de boas-vindas se habilitada
+  if (form?.welcome_enabled && showWelcome) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center p-4">
+        <div className="w-full max-w-2xl mx-auto">
+          <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-sm">
+            <CardContent className="p-8 md:p-12 text-center">
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                    {form.welcome_title}
+                  </h1>
+                  <p className="text-lg text-muted-foreground leading-relaxed">
+                    {form.welcome_description}
+                  </p>
+                </div>
+                
+                <div className="pt-8">
+                  <Button
+                    onClick={() => setShowWelcome(false)}
+                    className="px-8 py-3 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg transition-all duration-200 transform hover:scale-105"
+                    style={{ backgroundColor: form.theme_color }}
+                  >
+                    {form.welcome_button_text}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
