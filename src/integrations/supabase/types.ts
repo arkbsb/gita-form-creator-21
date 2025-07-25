@@ -395,6 +395,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          invitation_token: string | null
           updated_at: string
           user_id: string
         }
@@ -403,6 +404,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          invitation_token?: string | null
           updated_at?: string
           user_id: string
         }
@@ -411,6 +413,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          invitation_token?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -452,12 +455,67 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invitations: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_uses: number
+          description: string | null
+          email: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          token: string
+          updated_at: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_uses?: number
+          description?: string | null
+          email?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          token: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_uses?: number
+          description?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      use_invitation_token: {
+        Args: { p_token: string; p_user_id?: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
