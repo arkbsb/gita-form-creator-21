@@ -51,8 +51,6 @@ interface FieldResponse {
 }
 
 const PublicForm = () => {
-  console.log('=== PUBLICFORM COMPONENT CARREGADO ===');
-  alert('PublicForm carregou! Verifique o console.');
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -67,6 +65,7 @@ const PublicForm = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [errors, setErrors] = useState<{ [fieldId: string]: string }>({});
   const [showWelcome, setShowWelcome] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
     console.log('PublicForm carregou! Slug:', slug);
@@ -84,6 +83,8 @@ const PublicForm = () => {
       setLoading(true);
       
       // Load form data
+      setDebugInfo(`Buscando formulário com slug: ${slug}`);
+      
       let { data: formData, error: formError } = await supabase
         .from('forms')
         .select('*')
@@ -91,7 +92,7 @@ const PublicForm = () => {
         .eq('is_published', true)
         .single();
 
-      console.log('Debug - resultado da consulta (published=true):', { formData, formError });
+      setDebugInfo(`Resultado: ${formData ? 'Encontrado' : 'Não encontrado'} | Erro: ${formError?.message || 'nenhum'}`);
 
       // Se não encontrar, tentar buscar sem filtro de publicação para debug
       if (formError || !formData) {
@@ -101,11 +102,7 @@ const PublicForm = () => {
           .eq('slug', slug)
           .single();
         
-        console.log('Debug - formulário existe mas não está publicado?', { 
-          debugFormData, 
-          debugError,
-          is_published: debugFormData?.is_published 
-        });
+        setDebugInfo(prev => prev + ` | Debug: ${debugFormData ? `Existe mas is_published=${debugFormData.is_published}` : 'Não existe'}`);
         
         if (debugFormData && !debugFormData.is_published) {
           throw new Error('Formulário não está publicado');
@@ -115,7 +112,6 @@ const PublicForm = () => {
       }
 
       if (formError || !formData) {
-        console.error('Error loading form:', formError);
         throw new Error('Formulário não encontrado ou não está publicado');
       }
 
@@ -686,9 +682,12 @@ const PublicForm = () => {
         <Card className="w-full max-w-md">
           <CardContent className="text-center py-8">
             <h2 className="text-xl font-semibold mb-4">Formulário não encontrado</h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4">
               O formulário solicitado não existe ou não está mais disponível.
             </p>
+            <div className="bg-gray-100 p-3 rounded text-sm text-left mb-4">
+              <strong>Debug:</strong> {debugInfo}
+            </div>
             <Button onClick={() => navigate('/')}>
               Voltar ao início
             </Button>
