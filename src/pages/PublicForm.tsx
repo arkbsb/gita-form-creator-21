@@ -82,14 +82,56 @@ const PublicForm = () => {
     try {
       setLoading(true);
       
-      // Listar TODOS os formulários do banco
-      const { data: allForms } = await supabase
+      let { data: formData, error: formError } = await supabase
         .from('forms')
-        .select('*');
+        .select('*')
+        .eq('slug', slug)
+        .eq('is_published', true)
+        .single();
+
+      if (formError || !formData) {
+        throw new Error('Formulário não encontrado ou não está publicado');
+      }
+
+      // Parse webhook_url para extrair configurações de boas-vindas
+      let parsedFormData: FormData = formData as FormData;
       
-      setDebugInfo(`TODOS OS FORMULÁRIOS: ${JSON.stringify(allForms, null, 2)}`);
-      
-      return; // Para por aqui para ver os dados
+      if (formData.webhook_url) {
+        try {
+          const webhookData = JSON.parse(formData.webhook_url);
+          
+          if (typeof webhookData === 'object' && webhookData !== null) {
+            parsedFormData = {
+              ...formData,
+              welcome_enabled: webhookData.welcome_enabled || false,
+              welcome_title: webhookData.welcome_title || 'Bem-vindo!',
+              welcome_description: webhookData.welcome_description || 'Por favor, preencha o formulário abaixo.',
+              welcome_button_text: webhookData.welcome_button_text || 'Começar'
+            } as FormData;
+          }
+        } catch (error) {
+          // Se não conseguir fazer parse, mantém os dados originais
+          console.log('Debug - webhook URL não é JSON válido, usando configurações padrão:', error);
+        }
+      }
+
+      setForm(parsedFormData);
+
+      // Load form fields
+      const { data: fieldsData, error: fieldsError } = await supabase
+        .from('form_fields')
+        .select('*')
+        .eq('form_id', formData.id)
+        .order('order_index');
+
+      if (fieldsError) {
+        throw fieldsError;
+      }
+
+      setFields(fieldsData.map(field => ({
+        ...field,
+        options: Array.isArray(field.options) ? field.options.map(String) : null,
+      })));
 
     } catch (error) {
       console.error('Error loading form:', error);
