@@ -28,7 +28,8 @@ import {
   CheckSquare,
   Upload,
   Edit,
-  Palette
+  Palette,
+  ExternalLink
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -98,7 +99,7 @@ const CreateEditForm = () => {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { createSpreadsheet } = useGoogleSheetsIntegration();
+  const { createSpreadsheet, getSheetsStatus } = useGoogleSheetsIntegration();
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -1036,6 +1037,12 @@ const FormSettings = ({
   formData: FormData;
   onUpdate: (data: FormData) => void;
 }) => {
+  const { getSheetsStatus } = useGoogleSheetsIntegration();
+  const { toast } = useToast();
+  
+  // Parse webhook data to get Google Sheets status
+  const sheetsStatus = getSheetsStatus(formData.webhook_url);
+  
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -1113,6 +1120,47 @@ const FormSettings = ({
 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Integrações</h3>
+        
+        {/* Google Sheets Integration Status */}
+        {sheetsStatus.spreadsheetId && (
+          <div className="p-4 bg-success/10 border border-success/20 rounded-lg space-y-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-success rounded-full"></div>
+              <h4 className="font-medium text-success-foreground">Google Sheets Integrado</h4>
+            </div>
+            <p className="text-sm text-success-foreground/80">
+              As respostas deste formulário estão sendo sincronizadas automaticamente com o Google Sheets.
+            </p>
+            <div className="space-y-2">
+              <Label className="text-success-foreground font-medium">Link da Planilha:</Label>
+              <div className="flex items-center space-x-2">
+                <code className="text-xs bg-background px-3 py-2 rounded flex-1 overflow-hidden border">
+                  https://docs.google.com/spreadsheets/d/{sheetsStatus.spreadsheetId}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://docs.google.com/spreadsheets/d/${sheetsStatus.spreadsheetId}`);
+                    toast({ title: "Link da planilha copiado!" });
+                  }}
+                  className="shrink-0"
+                >
+                  Copiar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(`https://docs.google.com/spreadsheets/d/${sheetsStatus.spreadsheetId}`, '_blank')}
+                  className="shrink-0"
+                >
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Abrir
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="space-y-2">
           <Label>Webhook URL</Label>
