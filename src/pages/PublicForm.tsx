@@ -50,6 +50,22 @@ interface FieldResponse {
   [fieldId: string]: string | string[];
 }
 
+const formatPhoneNumber = (value: string): string => {
+  // Remove tudo que não seja número
+  const numbers = value.replace(/\D/g, '');
+  
+  // Formatar para (XX) XXXXX-XXXX
+  if (numbers.length <= 2) {
+    return numbers;
+  } else if (numbers.length <= 7) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+  } else if (numbers.length <= 11) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+  } else {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  }
+};
+
 const PublicForm = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -190,16 +206,14 @@ const PublicForm = () => {
   const validateField = (field: FormField): string | null => {
     const value = responses[field.id];
     
-    if (field.is_required) {
-      if (!value || (Array.isArray(value) && value.length === 0) || value === '') {
-        return 'Este campo é obrigatório';
-      }
+    if (field.is_required && (!value || value === '' || (Array.isArray(value) && value.length === 0))) {
+      return 'Este campo é obrigatório';
     }
 
     if (value && field.type === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(value as string)) {
-        return 'Email inválido';
+        return 'E-mail inválido';
       }
     }
 
@@ -208,6 +222,26 @@ const PublicForm = () => {
         new URL(value as string);
       } catch {
         return 'URL inválida';
+      }
+    }
+
+    if (value && field.type === 'tel') {
+      const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
+      if (!phoneRegex.test(value as string)) {
+        return 'Telefone deve estar no formato (11) 99999-9999';
+      }
+    }
+
+    if (value && field.type === 'name') {
+      const nameValue = value as string;
+      if (nameValue.trim().split(' ').length < 2) {
+        return 'Por favor, digite seu nome completo';
+      }
+    }
+
+    if (value && field.type === 'number') {
+      if (isNaN(Number(value))) {
+        return 'Digite apenas números';
       }
     }
 
@@ -393,13 +427,11 @@ const PublicForm = () => {
     const baseClasses = `w-full ${hasError ? 'border-destructive' : ''}`;
 
     switch (field.type) {
+      case 'name':
       case 'text':
       case 'email':
       case 'number':
-      case 'tel':
       case 'url':
-      case 'date':
-      case 'time':
         return (
           <div className="space-y-2">
             <Label htmlFor={field.id} className="flex items-center space-x-1">
@@ -411,11 +443,39 @@ const PublicForm = () => {
             )}
             <Input
               id={field.id}
-              type={field.type}
+              type={field.type === 'name' ? 'text' : field.type}
               value={value as string}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               placeholder={field.placeholder || "Sua resposta..."}
               className="w-full text-center text-lg py-3 bg-transparent border-0 border-b-2 rounded-none focus:ring-0 border-muted-foreground/30 focus:border-primary"
+            />
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
+          </div>
+        );
+
+      case 'tel':
+        return (
+          <div className="space-y-2">
+            <Label htmlFor={field.id} className="flex items-center space-x-1">
+              <span>{field.label}</span>
+              {field.is_required && <span className="text-destructive">*</span>}
+            </Label>
+            {field.description && (
+              <p className="text-sm text-muted-foreground">{field.description}</p>
+            )}
+            <Input
+              id={field.id}
+              type="tel"
+              value={value as string}
+              onChange={(e) => {
+                const formatted = formatPhoneNumber(e.target.value);
+                handleFieldChange(field.id, formatted);
+              }}
+              placeholder={field.placeholder || "(11) 99999-9999"}
+              className="w-full text-center text-lg py-3 bg-transparent border-0 border-b-2 rounded-none focus:ring-0 border-muted-foreground/30 focus:border-primary"
+              maxLength={15}
             />
             {error && (
               <p className="text-sm text-destructive">{error}</p>
@@ -547,6 +607,59 @@ const PublicForm = () => {
           </div>
         );
 
+      case 'terms':
+        return (
+          <div className="space-y-2">
+            {field.description && (
+              <p className="text-sm text-muted-foreground">{field.description}</p>
+            )}
+            <div className="flex items-start space-x-3 p-4 border border-border/30 rounded-lg bg-muted/10">
+              <Checkbox
+                id={field.id}
+                checked={value === 'accepted'}
+                onCheckedChange={(checked) => {
+                  handleFieldChange(field.id, checked ? 'accepted' : '');
+                }}
+              />
+              <Label htmlFor={field.id} className="font-normal leading-relaxed text-sm">
+                {field.label}
+              </Label>
+            </div>
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
+          </div>
+        );
+
+      case 'file':
+        return (
+          <div className="space-y-2">
+            <Label htmlFor={field.id} className="flex items-center space-x-1">
+              <span>{field.label}</span>
+              {field.is_required && <span className="text-destructive">*</span>}
+            </Label>
+            {field.description && (
+              <p className="text-sm text-muted-foreground">{field.description}</p>
+            )}
+            <Input
+              id={field.id}
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFieldChange(field.id, file.name);
+                } else {
+                  handleFieldChange(field.id, '');
+                }
+              }}
+              className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -556,21 +669,35 @@ const PublicForm = () => {
     const value = responses[field.id] || '';
     
     switch (field.type) {
+      case 'name':
       case 'text':
       case 'email':
       case 'number':
-      case 'tel':
       case 'url':
-      case 'date':
-      case 'time':
         return (
           <Input
             id={field.id}
-            type={field.type}
+            type={field.type === 'name' ? 'text' : field.type}
             value={value as string}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             placeholder={field.placeholder || "Sua resposta..."}
             className="w-full text-left text-lg py-4 px-6 bg-muted/20 border border-border/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 hover:bg-muted/30"
+          />
+        );
+
+      case 'tel':
+        return (
+          <Input
+            id={field.id}
+            type="tel"
+            value={value as string}
+            onChange={(e) => {
+              const formatted = formatPhoneNumber(e.target.value);
+              handleFieldChange(field.id, formatted);
+            }}
+            placeholder={field.placeholder || "(11) 99999-9999"}
+            className="w-full text-left text-lg py-4 px-6 bg-muted/20 border border-border/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 hover:bg-muted/30"
+            maxLength={15}
           />
         );
 
@@ -647,6 +774,48 @@ const PublicForm = () => {
                 </div>
               );
             })}
+          </div>
+        );
+
+      case 'terms':
+        return (
+          <div className="p-4 bg-muted/20 border border-border/30 rounded-xl">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id={field.id}
+                checked={value === 'accepted'}
+                onCheckedChange={(checked) => {
+                  handleFieldChange(field.id, checked ? 'accepted' : '');
+                }}
+              />
+              <Label htmlFor={field.id} className="text-lg font-normal leading-relaxed cursor-pointer flex-1 text-left">
+                {field.label}
+              </Label>
+            </div>
+          </div>
+        );
+
+      case 'file':
+        return (
+          <div className="p-6 bg-muted/20 border-2 border-dashed border-border/30 rounded-xl hover:bg-muted/30 transition-all duration-200">
+            <Input
+              id={field.id}
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFieldChange(field.id, file.name);
+                } else {
+                  handleFieldChange(field.id, '');
+                }
+              }}
+              className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
+            {value && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Arquivo selecionado: {value}
+              </p>
+            )}
           </div>
         );
 

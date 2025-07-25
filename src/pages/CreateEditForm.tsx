@@ -76,17 +76,16 @@ interface FormData {
 }
 
 const fieldTypes = [
-  { value: 'text', label: 'Texto', icon: FormInput },
-  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'name', label: 'Nome', icon: FormInput },
+  { value: 'email', label: 'E-mail', icon: Mail },
   { value: 'number', label: 'Número', icon: Hash },
-  { value: 'tel', label: 'Telefone', icon: Phone },
-  { value: 'url', label: 'URL', icon: FormInput },
+  { value: 'text', label: 'Resposta Curta', icon: FormInput },
   { value: 'textarea', label: 'Texto Longo', icon: FileText },
+  { value: 'tel', label: 'Telefone', icon: Phone },
+  { value: 'url', label: 'Link', icon: ExternalLink },
+  { value: 'checkbox', label: 'Múltipla Escolha', icon: CheckSquare },
   { value: 'select', label: 'Lista Suspensa', icon: List },
-  { value: 'radio', label: 'Múltipla Escolha', icon: CheckSquare },
-  { value: 'checkbox', label: 'Caixas de Seleção', icon: CheckSquare },
-  { value: 'date', label: 'Data', icon: Calendar },
-  { value: 'time', label: 'Hora', icon: Clock },
+  { value: 'terms', label: 'Termos de Uso', icon: CheckSquare },
   { value: 'file', label: 'Upload de Arquivo', icon: Upload },
 ];
 
@@ -262,14 +261,46 @@ const CreateEditForm = () => {
   };
 
   const addField = (type: string) => {
+    const getFieldLabel = (type: string) => {
+      switch (type) {
+        case 'name': return 'Nome completo';
+        case 'email': return 'Endereço de e-mail';
+        case 'number': return 'Número';
+        case 'text': return 'Resposta curta';
+        case 'textarea': return 'Texto longo';
+        case 'tel': return 'Telefone';
+        case 'url': return 'Link/URL';
+        case 'checkbox': return 'Múltipla escolha';
+        case 'select': return 'Lista suspensa';
+        case 'terms': return 'Aceito os termos de uso';
+        case 'file': return 'Upload de arquivo';
+        default: return `Nova pergunta ${type}`;
+      }
+    };
+
+    const getFieldPlaceholder = (type: string) => {
+      switch (type) {
+        case 'name': return 'Digite seu nome completo';
+        case 'email': return 'exemplo@email.com';
+        case 'number': return 'Digite um número';
+        case 'text': return 'Digite sua resposta';
+        case 'textarea': return 'Digite uma resposta mais detalhada...';
+        case 'tel': return '(11) 99999-9999';
+        case 'url': return 'https://exemplo.com';
+        case 'terms': return '';
+        case 'file': return 'Clique para selecionar um arquivo';
+        default: return '';
+      }
+    };
+
     const newField: FormField = {
       id: `temp-${Date.now()}`,
       type,
-      label: `Nova pergunta ${type}`,
+      label: getFieldLabel(type),
       description: '',
-      placeholder: '',
-      is_required: false,
-      options: ['select', 'radio', 'checkbox'].includes(type) ? ['Opção 1', 'Opção 2'] : [],
+      placeholder: getFieldPlaceholder(type),
+      is_required: type === 'terms' ? true : false,
+      options: ['select', 'checkbox'].includes(type) ? ['Opção 1', 'Opção 2'] : [],
       order_index: fields.length,
     };
     setFields([...fields, newField]);
