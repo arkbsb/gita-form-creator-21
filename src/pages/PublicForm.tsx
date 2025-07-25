@@ -261,9 +261,13 @@ const PublicForm = () => {
       }
 
       // Integração automática com Google Sheets
+      console.log('Form webhook_url para Google Sheets:', form!.webhook_url);
       const sheetsStatus = getSheetsStatus(form!.webhook_url);
+      console.log('Status da integração Google Sheets:', sheetsStatus);
+      
       if (sheetsStatus.spreadsheetId) {
         try {
+          console.log('Enviando resposta para planilha:', sheetsStatus.spreadsheetId);
           const formattedResponses = fields.map(field => ({
             questionId: field.id,
             question: field.label,
@@ -281,6 +285,14 @@ const PublicForm = () => {
           );
         } catch (sheetsError) {
           console.error('Erro ao sincronizar com Google Sheets:', sheetsError);
+        }
+      } else {
+        console.log('Spreadsheet ID não encontrado, pulando integração Google Sheets');
+        console.log('Detalhes do status:', JSON.stringify(sheetsStatus, null, 2));
+        
+        // Se não há spreadsheetId, verificar se o webhook_url está no formato antigo
+        if (form!.webhook_url && !form!.webhook_url.includes('spreadsheetId')) {
+          console.log('Webhook URL parece estar no formato antigo (apenas URL)');
         }
       }
 
