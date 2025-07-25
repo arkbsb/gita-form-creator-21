@@ -444,18 +444,31 @@ const CreateEditForm = () => {
       }
 
       if (fields.length > 0) {
-        const fieldsToSave = fields.map(field => ({
-          form_id: savedFormId,
-          type: field.type,
-          label: field.label,
-          description: field.description || null,
-          placeholder: field.placeholder || null,
-          is_required: field.is_required,
-          options: field.options.length > 0 ? field.options : null,
-          order_index: field.order_index,
-        }));
+        const fieldsToSave = fields.map(field => {
+          // Garantir que o tipo não seja null ou undefined
+          const fieldType = field.type || 'text';
+          
+          return {
+            form_id: savedFormId,
+            type: fieldType,
+            label: field.label || 'Campo sem título',
+            description: field.description || null,
+            placeholder: field.placeholder || null,
+            is_required: field.is_required || false,
+            options: field.options && field.options.length > 0 ? field.options : null,
+            order_index: field.order_index || 0,
+          };
+        });
 
         console.log('📝 Salvando campos:', fieldsToSave);
+        
+        // Verificar se algum campo tem problemas antes de salvar
+        const invalidFields = fieldsToSave.filter(field => !field.type || !field.label);
+        if (invalidFields.length > 0) {
+          console.error('❌ Campos inválidos encontrados:', invalidFields);
+          throw new Error(`Campos inválidos: ${invalidFields.length} campo(s) sem tipo ou título`);
+        }
+        
         const { error: fieldsError } = await supabase
           .from('form_fields')
           .insert(fieldsToSave);
