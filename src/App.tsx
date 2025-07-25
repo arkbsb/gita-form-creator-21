@@ -7,7 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import CreateEditForm from "./pages/CreateEditForm";
-import PublicForm from "./pages/PublicForm";
+import PublicFormTest from "./pages/PublicFormTest";
 import FormAnalytics from "./pages/FormAnalytics";
 import NotFound from "./pages/NotFound";
 
@@ -25,7 +25,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-form" element={<CreateEditForm />} />
           <Route path="/edit-form/:formId" element={<CreateEditForm />} />
-          <Route path="/form/:slug" element={<PublicForm />} />
+          <Route path="/form/:slug" element={<PublicFormTest />} />
           <Route path="/form-analytics/:formId" element={<FormAnalytics />} />
           <Route path="/invite/:token" element={<Auth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
