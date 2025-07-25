@@ -119,13 +119,18 @@ const PublicForm = () => {
           const webhookData = JSON.parse(formData.webhook_url);
           
           if (typeof webhookData === 'object' && webhookData !== null) {
+            // Novo formato: configurações dentro de 'settings'
+            const settings = webhookData.settings || {};
+            
             parsedFormData = {
               ...formData,
-              welcome_enabled: webhookData.welcome_enabled || false,
-              welcome_title: webhookData.welcome_title || 'Bem-vindo!',
-              welcome_description: webhookData.welcome_description || 'Por favor, preencha o formulário abaixo.',
-              welcome_button_text: webhookData.welcome_button_text || 'Começar'
+              welcome_enabled: settings.welcome_enabled || false,
+              welcome_title: settings.welcome_title || 'Bem-vindo!',
+              welcome_description: settings.welcome_description || 'Por favor, preencha o formulário abaixo.',
+              welcome_button_text: settings.welcome_button_text || 'Começar'
             } as FormData;
+            
+            console.log('🔍 Settings extraídas:', settings);
           }
         } catch (error) {
           // Se não conseguir fazer parse, mantém os dados originais
