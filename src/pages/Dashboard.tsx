@@ -341,7 +341,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <img src={logoGita} alt="Gita" className="h-8 w-auto" />
+              <img src={logoGita} alt="Gita" className="h-12 w-auto" />
             </div>
             <Badge variant="secondary">Dashboard</Badge>
           </div>
