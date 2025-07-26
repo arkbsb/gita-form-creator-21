@@ -29,7 +29,9 @@ import {
   Upload,
   Edit,
   Palette,
-  ExternalLink
+  ExternalLink,
+  Copy,
+  FileSpreadsheet
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -1316,7 +1318,8 @@ const FormSettings = ({
 // Google Sheets Card Component
 const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: string | null }) => {
   const { toast } = useToast();
-  const { getSheetsStatus } = useGoogleSheetsIntegration();
+  const { getSheetsStatus, createSpreadsheet } = useGoogleSheetsIntegration();
+  const [isCreating, setIsCreating] = useState(false);
   
   const sheetsStatus = getSheetsStatus(webhookUrl);
   
@@ -1324,59 +1327,125 @@ const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: 
     if (!sheetsStatus?.spreadsheetId) return null;
     return `https://docs.google.com/spreadsheets/d/${sheetsStatus.spreadsheetId}/edit`;
   };
-  
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Link copiado!",
+        description: "O link da planilha foi copiado para a área de transferência.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o link.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateSheet = async () => {
+    setIsCreating(true);
+    try {
+      // Buscar dados do formulário
+      const { data: form } = await supabase
+        .from('forms')
+        .select('title')
+        .eq('id', formId)
+        .single();
+
+      const { data: fields } = await supabase
+        .from('form_fields')
+        .select('id, label, type')
+        .eq('form_id', formId)
+        .order('order_index');
+
+      if (form && fields) {
+        const questions = fields.map(field => ({
+          id: field.id,
+          title: field.label,
+          type: field.type
+        }));
+
+        await createSpreadsheet(formId, form.title, questions);
+        // A página será atualizada automaticamente via revalidação
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Erro ao criar planilha:', error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const sheetsUrl = getGoogleSheetsUrl();
-  
-  if (!sheetsUrl) {
-    return (
-      <div className="text-center p-4">
-        <p className="text-sm text-muted-foreground">
-          Planilha ainda não foi criada.
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          A planilha será criada automaticamente quando o formulário receber a primeira resposta.
-        </p>
-      </div>
-    );
-  }
-  
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center space-x-2 text-sm">
-        <div className="w-2 h-2 bg-success rounded-full"></div>
-        <span className="text-success-foreground">Planilha ativa</span>
-      </div>
-      
-      <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
-        <p className="text-xs font-medium text-success-foreground mb-2">
-          Link da planilha:
-        </p>
-        <div className="flex items-center space-x-2">
-          <code className="text-xs bg-background px-2 py-1 rounded flex-1 overflow-hidden">
-            {sheetsUrl}
-          </code>
+    <div className="space-y-4">
+      {sheetsUrl ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full" />
+            <span className="text-sm font-medium text-green-700">Planilha ativa</span>
+          </div>
+          
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600 break-all">{sheetsUrl}</p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              onClick={() => copyToClipboard(sheetsUrl)}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copiar
+            </Button>
+            <Button
+              onClick={() => window.open(sheetsUrl, '_blank')}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Abrir Planilha
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-gray-400 rounded-full" />
+            <span className="text-sm font-medium text-gray-600">Planilha ainda não foi criada</span>
+          </div>
+          
+          <p className="text-sm text-gray-500 mb-3">
+            Crie agora a planilha do Google Sheets para coletar as respostas do formulário.
+          </p>
+
           <Button
-            size="sm"
+            onClick={handleCreateSheet}
+            disabled={isCreating}
             variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(sheetsUrl);
-              toast({ title: "Link copiado!" });
-            }}
+            size="sm"
+            className="w-full"
           >
-            Copiar
+            {isCreating ? (
+              <>
+                <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                Criando...
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Criar Planilha Google Sheets
+              </>
+            )}
           </Button>
         </div>
-      </div>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => window.open(sheetsUrl, '_blank')}
-      >
-        <ExternalLink className="w-4 h-4 mr-2" />
-        Abrir Planilha
-      </Button>
+      )}
     </div>
   );
 };
