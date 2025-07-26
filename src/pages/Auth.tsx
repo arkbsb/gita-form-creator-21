@@ -240,8 +240,8 @@ const Auth = () => {
             <Tabs defaultValue={inviteToken ? "signup" : "signin"} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
-                <TabsTrigger value="signup" disabled={!inviteToken}>
-                  {inviteToken ? "Criar Conta" : "Criar Conta (Convite Necessário)"}
+                <TabsTrigger value="signup" disabled={!inviteToken} className="text-sm">
+                  {inviteToken ? "Criar Conta" : "Conta (Convite)"}
                 </TabsTrigger>
               </TabsList>
 
