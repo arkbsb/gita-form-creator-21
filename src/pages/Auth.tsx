@@ -228,7 +228,7 @@ const Auth = () => {
           </Button>
           
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <img src={logoGita} alt="Gita" className="h-12 w-auto" />
+            <img src={logoGita} alt="Gita" className="h-16 w-auto" />
           </div>
           <p className="text-muted-foreground">
             {inviteToken ? "Use seu convite para criar uma conta" : "Entre na sua conta"}
