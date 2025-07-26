@@ -35,6 +35,7 @@ import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useGoogleSheetsIntegration } from "@/hooks/useGoogleSheetsIntegration";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import logoGita from "@/assets/logo-gita.svg";
 
 interface Form {
   id: string;
@@ -340,12 +341,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center">
-                <FormInput className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                Gita Responses
-              </span>
+              <img src={logoGita} alt="Gita" className="h-8 w-auto" />
             </div>
             <Badge variant="secondary">Dashboard</Badge>
           </div>

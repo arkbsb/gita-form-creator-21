@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGoogleSheetsIntegration, FormQuestion } from "@/hooks/useGoogleSheetsIntegration";
+import logoGita from "@/assets/logo-gita.svg";
 import { 
   ArrowLeft, 
   Plus, 
@@ -571,12 +572,7 @@ const CreateEditForm = () => {
               Voltar ao Dashboard
             </Button>
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center">
-                <FormInput className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                Gita Responses
-              </span>
+              <img src={logoGita} alt="Gita" className="h-8 w-auto" />
             </div>
           </div>
           <div className="flex items-center space-x-4">

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo-gita.svg";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -61,7 +61,7 @@ const Index = () => {
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <img src={logoImage} alt="Gita" className="h-8 w-auto" />
+            <img src={logoImage} alt="Gita" className="h-10 w-auto" />
           </div>
           <div className="flex items-center space-x-4">
             {user ? (
@@ -94,7 +94,7 @@ const Index = () => {
           <Badge variant="secondary" className="mb-6">
             🚀 Sistema Completo de Formulários
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-primary-light to-accent-foreground bg-clip-text text-transparent leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">
             Crie formulários poderosos
             <br />
             em minutos

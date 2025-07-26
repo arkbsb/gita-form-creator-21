@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { FormInput, Loader2, ArrowLeft } from "lucide-react";
+import logoGita from "@/assets/logo-gita.svg";
 import { User, Session } from "@supabase/supabase-js";
 
 const Auth = () => {
@@ -227,12 +228,7 @@ const Auth = () => {
           </Button>
           
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center">
-              <FormInput className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-              Gita Responses
-            </span>
+            <img src={logoGita} alt="Gita" className="h-12 w-auto" />
           </div>
           <p className="text-muted-foreground">
             {inviteToken ? "Use seu convite para criar uma conta" : "Entre na sua conta"}

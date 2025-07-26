@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, useParams } from "react-router-dom";
+import logoGita from "@/assets/logo-gita.svg";
 
 interface FormData {
   id: string;
@@ -319,12 +320,7 @@ const FormAnalytics = () => {
               Voltar ao Dashboard
             </Button>
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-lg flex items-center justify-center">
-                <FormInput className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                Gita Responses
-              </span>
+              <img src={logoGita} alt="Gita" className="h-8 w-auto" />
             </div>
             <Badge variant="secondary">Análise de Respostas</Badge>
           </div>
