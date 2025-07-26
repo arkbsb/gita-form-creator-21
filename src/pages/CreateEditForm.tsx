@@ -1323,8 +1323,7 @@ const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: 
   const sheetsStatus = getSheetsStatus(webhookUrl);
   
   const getGoogleSheetsUrl = () => {
-    if (!sheetsStatus?.spreadsheetId) return null;
-    return `https://docs.google.com/spreadsheets/d/${sheetsStatus.spreadsheetId}/edit`;
+    return sheetsStatus?.spreadsheetUrl || null;
   };
 
   const copyToClipboard = async (text: string) => {
