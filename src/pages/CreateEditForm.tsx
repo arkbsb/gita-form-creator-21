@@ -1318,8 +1318,7 @@ const FormSettings = ({
 // Google Sheets Card Component
 const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: string | null }) => {
   const { toast } = useToast();
-  const { getSheetsStatus, createSpreadsheet } = useGoogleSheetsIntegration();
-  const [isCreating, setIsCreating] = useState(false);
+  const { getSheetsStatus } = useGoogleSheetsIntegration();
   
   const sheetsStatus = getSheetsStatus(webhookUrl);
   
@@ -1341,40 +1340,6 @@ const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: 
         description: "Não foi possível copiar o link.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleCreateSheet = async () => {
-    setIsCreating(true);
-    try {
-      // Buscar dados do formulário
-      const { data: form } = await supabase
-        .from('forms')
-        .select('title')
-        .eq('id', formId)
-        .single();
-
-      const { data: fields } = await supabase
-        .from('form_fields')
-        .select('id, label, type')
-        .eq('form_id', formId)
-        .order('order_index');
-
-      if (form && fields) {
-        const questions = fields.map(field => ({
-          id: field.id,
-          title: field.label,
-          type: field.type
-        }));
-
-        await createSpreadsheet(formId, form.title, questions);
-        // A página será atualizada automaticamente via revalidação
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Erro ao criar planilha:', error);
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -1421,29 +1386,9 @@ const GoogleSheetsCard = ({ formId, webhookUrl }: { formId: string; webhookUrl: 
             <span className="text-sm font-medium text-gray-600">Planilha ainda não foi criada</span>
           </div>
           
-          <p className="text-sm text-gray-500 mb-3">
-            Crie agora a planilha do Google Sheets para coletar as respostas do formulário.
+          <p className="text-sm text-gray-500">
+            A planilha será criada automaticamente quando o formulário for salvo.
           </p>
-
-          <Button
-            onClick={handleCreateSheet}
-            disabled={isCreating}
-            variant="outline"
-            size="sm"
-            className="w-full"
-          >
-            {isCreating ? (
-              <>
-                <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                Criando...
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Criar Planilha Google Sheets
-              </>
-            )}
-          </Button>
         </div>
       )}
     </div>
