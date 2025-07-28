@@ -59,7 +59,6 @@ const CreateEditForm = () => {
 
   useEffect(() => {
     console.log('🟢 CreateEditForm carregado! FormId:', formId);
-    alert('TESTE: Componente CreateEditForm carregou!');
     fetchFolders();
     if (formId) {
       loadForm();
@@ -353,6 +352,7 @@ const CreateEditForm = () => {
             <Button 
               variant="outline" 
               onClick={() => {
+                alert('TESTE: Botão "Salvar Rascunho" clicado!');
                 console.log('🔵 Botão "Salvar Rascunho" clicado');
                 saveForm();
               }} 
