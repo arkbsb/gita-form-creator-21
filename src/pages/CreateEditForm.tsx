@@ -93,6 +93,9 @@ const CreateEditForm = () => {
         theme_color: form.theme_color || "#6366f1",
         success_message: form.success_message || "Obrigado por sua resposta!",
         submit_button_text: form.submit_button_text || "Enviar",
+        welcome_message: form.welcome_message || "",
+        welcome_button_text: form.welcome_button_text || "Começar",
+        show_welcome_screen: form.show_welcome_screen || false,
         fields: (fields || []).map(field => ({
           id: field.id,
           type: field.type,
@@ -214,7 +217,10 @@ const CreateEditForm = () => {
             is_published: formData.is_published,
             theme_color: formData.theme_color,
             success_message: formData.success_message,
-            submit_button_text: formData.submit_button_text
+            submit_button_text: formData.submit_button_text,
+            welcome_message: formData.welcome_message,
+            welcome_button_text: formData.welcome_button_text,
+            show_welcome_screen: formData.show_welcome_screen
           })
           .eq('id', formId);
 
@@ -241,6 +247,9 @@ const CreateEditForm = () => {
             theme_color: formData.theme_color,
             success_message: formData.success_message,
             submit_button_text: formData.submit_button_text,
+            welcome_message: formData.welcome_message,
+            welcome_button_text: formData.welcome_button_text,
+            show_welcome_screen: formData.show_welcome_screen,
             slug: `form-${Date.now()}`,
             user_id: user?.id
           })

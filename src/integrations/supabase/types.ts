@@ -381,6 +381,7 @@ export type Database = {
           is_published: boolean
           require_login: boolean
           show_progress_bar: boolean
+          show_welcome_screen: boolean | null
           slug: string
           submit_button_text: string | null
           success_message: string | null
@@ -389,6 +390,8 @@ export type Database = {
           updated_at: string
           user_id: string
           webhook_url: string | null
+          welcome_button_text: string | null
+          welcome_message: string | null
         }
         Insert: {
           allow_multiple_submissions?: boolean
@@ -400,6 +403,7 @@ export type Database = {
           is_published?: boolean
           require_login?: boolean
           show_progress_bar?: boolean
+          show_welcome_screen?: boolean | null
           slug: string
           submit_button_text?: string | null
           success_message?: string | null
@@ -408,6 +412,8 @@ export type Database = {
           updated_at?: string
           user_id: string
           webhook_url?: string | null
+          welcome_button_text?: string | null
+          welcome_message?: string | null
         }
         Update: {
           allow_multiple_submissions?: boolean
@@ -419,6 +425,7 @@ export type Database = {
           is_published?: boolean
           require_login?: boolean
           show_progress_bar?: boolean
+          show_welcome_screen?: boolean | null
           slug?: string
           submit_button_text?: string | null
           success_message?: string | null
@@ -427,6 +434,8 @@ export type Database = {
           updated_at?: string
           user_id?: string
           webhook_url?: string | null
+          welcome_button_text?: string | null
+          welcome_message?: string | null
         }
         Relationships: [
           {
