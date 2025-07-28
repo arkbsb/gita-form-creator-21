@@ -35,6 +35,7 @@ interface FormData {
   welcome_message?: string;
   welcome_button_text?: string;
   show_welcome_screen?: boolean;
+  folder_id?: string | null;
   fields: FormField[];
 }
 
@@ -55,15 +56,36 @@ const CreateEditForm = () => {
     welcome_message: "",
     welcome_button_text: "Começar",
     show_welcome_screen: false,
+    folder_id: null,
     fields: []
   });
+  const [folders, setFolders] = useState<any[]>([]);
   const { createSpreadsheet, getSheetsStatus } = useGoogleSheetsIntegration();
 
   useEffect(() => {
     if (formId) {
       loadForm();
     }
+    fetchFolders();
   }, [formId]);
+
+  const fetchFolders = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data, error } = await supabase
+        .from("folders")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .order("order_index");
+
+      if (error) throw error;
+      setFolders(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar pastas:", error);
+    }
+  };
 
   const loadForm = async () => {
     setLoading(true);
@@ -96,6 +118,7 @@ const CreateEditForm = () => {
         welcome_message: form.welcome_message || "",
         welcome_button_text: form.welcome_button_text || "Começar",
         show_welcome_screen: form.show_welcome_screen || false,
+        folder_id: form.folder_id || null,
         fields: (fields || []).map(field => ({
           id: field.id,
           type: field.type,
@@ -220,7 +243,8 @@ const CreateEditForm = () => {
             submit_button_text: formData.submit_button_text,
             welcome_message: formData.welcome_message,
             welcome_button_text: formData.welcome_button_text,
-            show_welcome_screen: formData.show_welcome_screen
+            show_welcome_screen: formData.show_welcome_screen,
+            folder_id: formData.folder_id
           })
           .eq('id', formId);
 
@@ -250,6 +274,7 @@ const CreateEditForm = () => {
             welcome_message: formData.welcome_message,
             welcome_button_text: formData.welcome_button_text,
             show_welcome_screen: formData.show_welcome_screen,
+            folder_id: formData.folder_id,
             slug: `form-${Date.now()}`,
             user_id: user?.id
           })
@@ -411,6 +436,26 @@ const CreateEditForm = () => {
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_published: checked }))}
               />
               <Label htmlFor="published">Formulário publicado</Label>
+            </div>
+
+            <div>
+              <Label htmlFor="folder">Pasta do Formulário</Label>
+              <Select
+                value={formData.folder_id || ""}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, folder_id: value || null }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma pasta (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Raiz (sem pasta)</SelectItem>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>

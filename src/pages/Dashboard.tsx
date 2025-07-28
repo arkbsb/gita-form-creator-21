@@ -626,27 +626,14 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     ) : (
-                      <Droppable droppableId="forms-area">
-                        {(provided, snapshot) => (
-                          <div
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            className={`transition-colors ${
-                              snapshot.isDraggingOver ? 'bg-muted/20 rounded-lg p-4' : ''
-                            }`}
-                          >
-                            <FormsDragDrop
-                              forms={forms}
-                              onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
-                              onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
-                              onDeleteForm={handleDeleteForm}
-                              onCopyLink={copyFormLink}
-                              selectedFolderId={selectedFolderId}
-                            />
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
+                      <FormsDragDrop
+                        forms={forms}
+                        onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
+                        onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
+                        onDeleteForm={handleDeleteForm}
+                        onCopyLink={copyFormLink}
+                        selectedFolderId={selectedFolderId}
+                      />
                     )}
                   </div>
                 </div>
