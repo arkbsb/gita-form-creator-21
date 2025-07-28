@@ -349,14 +349,25 @@ const CreateEditForm = () => {
             </h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={saveForm} disabled={loading}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                console.log('🔵 Botão "Salvar Rascunho" clicado');
+                saveForm();
+              }} 
+              disabled={loading}
+            >
               <Save className="h-4 w-4 mr-2" />
               Salvar Rascunho
             </Button>
             <Button 
               onClick={() => {
+                console.log('🔵 Botão "Publicar" clicado');
                 setFormData(prev => ({ ...prev, is_published: true }));
-                setTimeout(saveForm, 100);
+                setTimeout(() => {
+                  console.log('🔵 Executando saveForm após setTimeout');
+                  saveForm();
+                }, 100);
               }} 
               disabled={loading}
             >
