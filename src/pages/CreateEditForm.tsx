@@ -193,7 +193,6 @@ const CreateEditForm = () => {
   };
 
   const saveForm = async () => {
-    alert('TESTE: Função saveForm executando!');
     console.log('🟡 INÍCIO da função saveForm');
     console.log('🟡 formData.title:', formData.title);
     
@@ -293,24 +292,26 @@ const CreateEditForm = () => {
         description: formId ? "Formulário atualizado com sucesso!" : "Formulário criado com sucesso!"
       });
 
-      // Enviar webhook para n8n
+      // Enviar webhook para n8n (com pequeno delay para garantir que o form foi salvo)
       console.log('🚀 Tentando enviar webhook para n8n...');
       console.log('🚀 savedFormId:', savedFormId);
       console.log('🚀 formId original:', formId);
       console.log('🚀 Action:', formId ? 'update' : 'create');
       
-      try {
-        const webhookResponse = await supabase.functions.invoke('send-form-webhook', {
-          body: { 
-            formId: savedFormId, 
-            action: formId ? 'update' : 'create' 
-          }
-        });
-        console.log('✅ Webhook enviado com sucesso:', webhookResponse);
-      } catch (webhookError) {
-        console.error('❌ Erro ao enviar webhook:', webhookError);
-        // Não mostrar erro de webhook para o usuário, pois o formulário foi salvo com sucesso
-      }
+      setTimeout(async () => {
+        try {
+          const webhookResponse = await supabase.functions.invoke('send-form-webhook', {
+            body: { 
+              formId: savedFormId, 
+              action: formId ? 'update' : 'create' 
+            }
+          });
+          console.log('✅ Webhook enviado com sucesso:', webhookResponse);
+        } catch (webhookError) {
+          console.error('❌ Erro ao enviar webhook:', webhookError);
+          // Não mostrar erro de webhook para o usuário, pois o formulário foi salvo com sucesso
+        }
+      }, 1000); // Delay de 1 segundo
 
       navigate('/dashboard');
     } catch (error) {
@@ -353,7 +354,6 @@ const CreateEditForm = () => {
             <Button 
               variant="outline" 
               onClick={() => {
-                alert('TESTE: Botão "Salvar Rascunho" clicado!');
                 console.log('🔵 Botão "Salvar Rascunho" clicado');
                 saveForm();
               }} 
