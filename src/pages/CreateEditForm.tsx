@@ -40,6 +40,8 @@ interface FormData {
 }
 
 const CreateEditForm = () => {
+  console.log('CreateEditForm component started');
+  
   const { formId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
