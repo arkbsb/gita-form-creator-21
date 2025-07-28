@@ -27,6 +27,7 @@ import {
   Loader2,
   Sheet
 } from "lucide-react";
+import { DragDropContext } from "@hello-pangea/dnd";
 import InviteManager from "@/components/InviteManager";
 import { FolderSidebar } from "@/components/FolderSidebar";
 import { FolderBreadcrumb } from "@/components/FolderBreadcrumb";
@@ -226,6 +227,53 @@ const Dashboard = () => {
         description: "Não foi possível mover o formulário.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    // Se é um formulário sendo arrastado
+    if (result.type === 'FORM' || result.source.droppableId === 'forms') {
+      const targetFolderId = result.destination.droppableId === 'root' ? null : result.destination.droppableId;
+      await handleFormMove(result.draggableId, targetFolderId);
+      return;
+    }
+
+    // Se é reordenação de pastas
+    if (result.source.droppableId === 'folders' && result.destination.droppableId === 'folders') {
+      const items = Array.from(folders);
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, reorderedItem);
+
+      const updatedItems = items.map((item, index) => ({
+        ...item,
+        order_index: index
+      }));
+
+      setFolders(updatedItems);
+
+      try {
+        const updates = updatedItems.map((folder, index) => ({
+          id: folder.id,
+          order_index: index
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from("folders")
+            .update({ order_index: update.order_index })
+            .eq("id", update.id);
+        }
+      } catch (error) {
+        console.error("Erro ao reordenar pastas:", error);
+        toast({
+          title: "Erro ao reordenar pastas",
+          description: "Não foi possível reordenar as pastas.",
+          variant: "destructive",
+        });
+        fetchFolders();
+      }
     }
   };
 
@@ -524,56 +572,58 @@ const Dashboard = () => {
 
           {/* Forms Management Tab */}
           <TabsContent value="forms">
-            <div className="flex h-[800px] border border-form-field-border rounded-lg bg-gradient-to-br from-card to-form-field-bg">
-              {/* Sidebar */}
-              <FolderSidebar
-                selectedFolderId={selectedFolderId}
-                onFolderSelect={handleFolderSelect}
-                onFolderUpdate={fetchFolders}
-                formCounts={formCounts}
-              />
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="flex h-[800px] border border-form-field-border rounded-lg bg-gradient-to-br from-card to-form-field-bg">
+                {/* Sidebar */}
+                <FolderSidebar
+                  selectedFolderId={selectedFolderId}
+                  onFolderSelect={handleFolderSelect}
+                  onFolderUpdate={fetchFolders}
+                  formCounts={formCounts}
+                  folders={folders}
+                />
 
-              {/* Main Content */}
-              <div className="flex-1 p-6 overflow-auto">
-                <div className="space-y-6">
-                  {/* Breadcrumb */}
-                  <FolderBreadcrumb selectedFolderName={selectedFolderName} />
+                {/* Main Content */}
+                <div className="flex-1 p-6 overflow-auto">
+                  <div className="space-y-6">
+                    {/* Breadcrumb */}
+                    <FolderBreadcrumb selectedFolderName={selectedFolderName} />
 
-                  {/* Content */}
-                  {formsLoading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                      <p className="text-muted-foreground">Carregando formulários...</p>
-                    </div>
-                  ) : forms.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Nenhum formulário encontrado</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Comece criando seu primeiro formulário
-                      </p>
-                      <Button 
-                        onClick={() => navigate('/create-form')}
-                        className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Criar Primeiro Formulário
-                      </Button>
-                    </div>
-                  ) : (
-                    <FormsDragDrop
-                      forms={forms}
-                      onFormMove={handleFormMove}
-                      onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
-                      onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
-                      onDeleteForm={handleDeleteForm}
-                      onCopyLink={copyFormLink}
-                      selectedFolderId={selectedFolderId}
-                    />
-                  )}
+                    {/* Content */}
+                    {formsLoading ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Carregando formulários...</p>
+                      </div>
+                    ) : forms.length === 0 ? (
+                      <div className="text-center py-12">
+                        <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Nenhum formulário encontrado</h3>
+                        <p className="text-muted-foreground mb-6">
+                          Comece criando seu primeiro formulário
+                        </p>
+                        <Button 
+                          onClick={() => navigate('/create-form')}
+                          className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Criar Primeiro Formulário
+                        </Button>
+                      </div>
+                    ) : (
+                      <FormsDragDrop
+                        forms={forms}
+                        onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
+                        onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
+                        onDeleteForm={handleDeleteForm}
+                        onCopyLink={copyFormLink}
+                        selectedFolderId={selectedFolderId}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </DragDropContext>
           </TabsContent>
 
           {/* Data Visualization Tab */}

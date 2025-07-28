@@ -23,10 +23,11 @@ interface FolderSidebarProps {
   onFolderSelect: (folderId: string | null) => void;
   onFolderUpdate: () => void;
   formCounts: Record<string, number>;
+  folders: any[];
 }
 
-export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate, formCounts }: FolderSidebarProps) {
-  const [folders, setFolders] = useState<FolderType[]>([]);
+export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate, formCounts, folders }: FolderSidebarProps) {
+  const [localFolders, setLocalFolders] = useState<FolderType[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [newFolderName, setNewFolderName] = useState("");
   const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
@@ -34,8 +35,8 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchFolders();
-  }, []);
+    setLocalFolders(folders);
+  }, [folders]);
 
   const fetchFolders = async () => {
     try {
@@ -50,7 +51,7 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
 
       if (error) throw error;
       
-      setFolders(data || []);
+      setLocalFolders(data || []);
     } catch (error) {
       console.error("Erro ao buscar pastas:", error);
       toast.error("Erro ao carregar pastas");
@@ -69,14 +70,13 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
         .insert({
           name: newFolderName.trim(),
           user_id: user.user.id,
-          order_index: folders.length
+          order_index: localFolders.length
         });
 
       if (error) throw error;
 
       setNewFolderName("");
       setIsCreateDialogOpen(false);
-      fetchFolders();
       onFolderUpdate();
       toast.success("Pasta criada com sucesso!");
     } catch (error) {
@@ -98,7 +98,7 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
 
       setEditingFolder(null);
       setIsEditDialogOpen(false);
-      fetchFolders();
+      onFolderUpdate();
       toast.success("Pasta renomeada com sucesso!");
     } catch (error) {
       console.error("Erro ao renomear pasta:", error);
@@ -129,7 +129,6 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
         onFolderSelect(null);
       }
 
-      fetchFolders();
       onFolderUpdate();
       toast.success("Pasta deletada e formulários movidos para a raiz");
     } catch (error) {
@@ -148,40 +147,6 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
     setExpandedFolders(newExpanded);
   };
 
-  const onDragEnd = async (result: any) => {
-    if (!result.destination) return;
-
-    const items = Array.from(folders);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Atualizar order_index localmente
-    const updatedItems = items.map((item, index) => ({
-      ...item,
-      order_index: index
-    }));
-
-    setFolders(updatedItems);
-
-    // Atualizar no banco
-    try {
-      const updates = updatedItems.map((folder, index) => ({
-        id: folder.id,
-        order_index: index
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from("folders")
-          .update({ order_index: update.order_index })
-          .eq("id", update.id);
-      }
-    } catch (error) {
-      console.error("Erro ao reordenar pastas:", error);
-      toast.error("Erro ao reordenar pastas");
-      fetchFolders(); // Reverter mudanças
-    }
-  };
 
   const rootFormCount = formCounts['root'] || 0;
 
@@ -219,31 +184,41 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
         </div>
 
         {/* Todos os Formulários */}
-        <button
-          onClick={() => onFolderSelect(null)}
-          className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-colors ${
-            selectedFolderId === null 
-              ? "bg-primary text-primary-foreground" 
-              : "hover:bg-muted"
-          }`}
-        >
-          <div className="flex items-center space-x-2">
-            <Folder className="h-4 w-4" />
-            <span className="text-sm">Todos os Formulários</span>
-          </div>
-          <span className="text-xs bg-muted-foreground/20 px-2 py-1 rounded">
-            {rootFormCount}
-          </span>
-        </button>
+        <Droppable droppableId="root">
+          {(provided, snapshot) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className={`transition-colors ${snapshot.isDraggingOver ? 'bg-muted/20 rounded-lg' : ''}`}
+            >
+              <button
+                onClick={() => onFolderSelect(null)}
+                className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-colors ${
+                  selectedFolderId === null 
+                    ? "bg-primary text-primary-foreground" 
+                    : "hover:bg-muted"
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Folder className="h-4 w-4" />
+                  <span className="text-sm">Todos os Formulários</span>
+                </div>
+                <span className="text-xs bg-muted-foreground/20 px-2 py-1 rounded">
+                  {rootFormCount}
+                </span>
+              </button>
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="folders">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef}>
-                  {folders.map((folder, index) => (
+          <Droppable droppableId="folders">
+            {(provided) => (
+              <div {...provided.droppableProps} ref={provided.innerRef}>
+                {localFolders.map((folder, index) => (
                     <Draggable key={folder.id} draggableId={folder.id} index={index}>
                       {(provided, snapshot) => (
                         <div
@@ -251,59 +226,71 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
                           {...provided.draggableProps}
                           className={`group mb-1 ${snapshot.isDragging ? 'opacity-50' : ''}`}
                         >
-                          <div
-                            className={`flex items-center justify-between p-2 rounded-md transition-colors ${
-                              selectedFolderId === folder.id 
-                                ? "bg-primary text-primary-foreground" 
-                                : "hover:bg-muted"
-                            }`}
-                          >
-                            <button
-                              onClick={() => onFolderSelect(folder.id)}
-                              className="flex items-center space-x-2 flex-1 text-left"
-                            >
-                              <div {...provided.dragHandleProps} className="cursor-grab">
-                                <Folder className="h-4 w-4" />
+                          {/* Droppable zone for each folder */}
+                          <Droppable droppableId={folder.id}>
+                            {(droppableProvided, droppableSnapshot) => (
+                              <div
+                                {...droppableProvided.droppableProps}
+                                ref={droppableProvided.innerRef}
+                                className={`transition-colors ${droppableSnapshot.isDraggingOver ? 'bg-muted/20 rounded-lg' : ''}`}
+                              >
+                                <div
+                                  className={`flex items-center justify-between p-2 rounded-md transition-colors ${
+                                    selectedFolderId === folder.id 
+                                      ? "bg-primary text-primary-foreground" 
+                                      : "hover:bg-muted"
+                                  }`}
+                                >
+                                  <button
+                                    onClick={() => onFolderSelect(folder.id)}
+                                    className="flex items-center space-x-2 flex-1 text-left"
+                                  >
+                                    <div {...provided.dragHandleProps} className="cursor-grab">
+                                      <Folder className="h-4 w-4" />
+                                    </div>
+                                    <span className="text-sm truncate">{folder.name}</span>
+                                  </button>
+                                  
+                                  <div className="flex items-center space-x-1">
+                                    <span className="text-xs bg-muted-foreground/20 px-2 py-1 rounded">
+                                      {formCounts[folder.id] || 0}
+                                    </span>
+                                    
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                                        >
+                                          <MoreHorizontal className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem 
+                                          onClick={() => {
+                                            setEditingFolder({ id: folder.id, name: folder.name });
+                                            setIsEditDialogOpen(true);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Renomear
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          onClick={() => deleteFolder(folder.id)}
+                                          className="text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Deletar
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </div>
+                                {droppableProvided.placeholder}
                               </div>
-                              <span className="text-sm truncate">{folder.name}</span>
-                            </button>
-                            
-                            <div className="flex items-center space-x-1">
-                              <span className="text-xs bg-muted-foreground/20 px-2 py-1 rounded">
-                                {formCounts[folder.id] || 0}
-                              </span>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setEditingFolder({ id: folder.id, name: folder.name });
-                                      setIsEditDialogOpen(true);
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Renomear
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => deleteFolder(folder.id)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Deletar
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
+                            )}
+                          </Droppable>
                         </div>
                       )}
                     </Draggable>
@@ -312,7 +299,6 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
                 </div>
               )}
             </Droppable>
-          </DragDropContext>
         </div>
       </ScrollArea>
 

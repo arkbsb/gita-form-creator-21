@@ -14,11 +14,11 @@ interface Form {
   is_published: boolean;
   created_at: string;
   folder_id: string | null;
+  webhook_url: string | null;
 }
 
 interface FormsDragDropProps {
   forms: Form[];
-  onFormMove: (formId: string, targetFolderId: string | null) => void;
   onEditForm: (formId: string) => void;
   onViewAnalytics: (formId: string) => void;
   onDeleteForm: (formId: string) => void;
@@ -28,21 +28,12 @@ interface FormsDragDropProps {
 
 export function FormsDragDrop({ 
   forms, 
-  onFormMove, 
   onEditForm, 
   onViewAnalytics, 
   onDeleteForm, 
   onCopyLink,
   selectedFolderId 
 }: FormsDragDropProps) {
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
-
-    const formId = result.draggableId;
-    const targetFolderId = result.destination.droppableId === 'root' ? null : result.destination.droppableId;
-    
-    onFormMove(formId, targetFolderId);
-  };
 
   const filteredForms = forms.filter(form => {
     if (selectedFolderId === null) {
@@ -73,19 +64,18 @@ export function FormsDragDrop({
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId={selectedFolderId || 'root'}>
-        {(provided, snapshot) => (
-          <div
-            {...provided.droppableProps}
-            ref={provided.innerRef}
-            className={`grid gap-6 md:grid-cols-2 lg:grid-cols-3 transition-colors ${
-              snapshot.isDraggingOver ? 'bg-muted/20 rounded-lg p-4' : ''
-            }`}
-          >
-            {filteredForms.map((form, index) => (
-              <Draggable key={form.id} draggableId={form.id} index={index}>
-                {(provided, snapshot) => (
+    <Droppable droppableId="forms">
+      {(provided, snapshot) => (
+        <div
+          {...provided.droppableProps}
+          ref={provided.innerRef}
+          className={`grid gap-6 md:grid-cols-2 lg:grid-cols-3 transition-colors ${
+            snapshot.isDraggingOver ? 'bg-muted/20 rounded-lg p-4' : ''
+          }`}
+        >
+          {filteredForms.map((form, index) => (
+            <Draggable key={form.id} draggableId={form.id} index={index}>
+              {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
@@ -123,6 +113,25 @@ export function FormsDragDrop({
                               <ExternalLink className="mr-2 h-4 w-4" />
                               Copiar Link
                             </DropdownMenuItem>
+                            {form.webhook_url && (() => {
+                              try {
+                                const webhookData = JSON.parse(form.webhook_url);
+                                const spreadsheetId = webhookData?.sheets?.spreadsheetId;
+                                if (spreadsheetId) {
+                                  return (
+                                    <DropdownMenuItem 
+                                      onClick={() => window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}`, '_blank')}
+                                    >
+                                      <ExternalLink className="mr-2 h-4 w-4" />
+                                      Abrir Google Sheets
+                                    </DropdownMenuItem>
+                                  );
+                                }
+                              } catch (error) {
+                                console.error('Erro ao parsear webhook_url:', error);
+                              }
+                              return null;
+                            })()}
                             <DropdownMenuItem 
                               onClick={() => onDeleteForm(form.id)}
                               className="text-destructive"
@@ -147,11 +156,10 @@ export function FormsDragDrop({
                   </div>
                 )}
               </Draggable>
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
+          ))}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
   );
 }
