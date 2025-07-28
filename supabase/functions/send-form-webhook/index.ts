@@ -15,23 +15,23 @@ serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { formId, action } = await req.json();
-    console.log(`Processing webhook for form ${formId} with action: ${action}`);
+    console.log(`🚀 Processing webhook for form ${formId} with action: ${action}`);
 
     // Retry mechanism to handle database consistency
     let form = null;
     let attempts = 0;
-    const maxAttempts = 5;
-    const retryDelay = 1000; // 1 second between retries
+    const maxAttempts = 10;
+    const retryDelay = 2000; // 2 seconds between retries
 
     while (!form && attempts < maxAttempts) {
       attempts++;
-      console.log(`Attempt ${attempts}/${maxAttempts} to fetch form ${formId}`);
+      console.log(`🔄 Attempt ${attempts}/${maxAttempts} to fetch form ${formId}`);
       
-      // Get form data with fields
+      // Get form data with fields using service role key
       const { data: formData, error: formError } = await supabase
         .from('forms')
         .select(`
@@ -42,13 +42,13 @@ serve(async (req) => {
         .maybeSingle();
 
       if (formError) {
-        console.error('Error fetching form:', formError);
+        console.error('❌ Error fetching form:', formError);
         throw formError;
       }
 
       if (formData) {
         form = formData;
-        console.log(`✅ Form found on attempt ${attempts}`);
+        console.log(`✅ Form found on attempt ${attempts}: ${formData.title}`);
         break;
       } else {
         console.log(`❌ Form not found on attempt ${attempts}, retrying in ${retryDelay}ms...`);
@@ -59,19 +59,24 @@ serve(async (req) => {
     }
 
     if (!form) {
-      console.log('Form not found after all retry attempts:', formId);
+      console.log('❌ Form not found after all retry attempts:', formId);
       return new Response(
         JSON.stringify({ success: false, message: 'Form not found after retries' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
-    // URL fixo para criação/atualização de formulários
-    const webhookUrl = 'https://autowebhook.gita.work/webhook/criar-planilha-forms';
-    console.log(`Sending webhook for form ${formId} with action: ${action} to ${webhookUrl}`);
+    // URL do webhook n8n
+    const webhookUrl = 'https://auto.gita.work/webhook/criar-planilha-forms';
+    console.log(`📡 Sending webhook for form ${formId} with action: ${action} to ${webhookUrl}`);
 
     // Prepare webhook payload
     const webhookPayload = {
+      formId: form.id,
+      formTitle: form.title,
       action, // 'create' or 'update'
       timestamp: new Date().toISOString(),
       form: {
@@ -90,10 +95,10 @@ serve(async (req) => {
         created_at: form.created_at,
         updated_at: form.updated_at
       },
-      fields: form.form_fields?.map(field => ({
+      questions: form.form_fields?.map(field => ({
         id: field.id,
+        title: field.label,
         type: field.type,
-        label: field.label,
         placeholder: field.placeholder,
         is_required: field.is_required,
         options: field.options,
@@ -101,39 +106,59 @@ serve(async (req) => {
       })) || []
     };
 
-    console.log('Sending webhook to:', webhookUrl);
+    console.log('📤 Sending webhook payload:', JSON.stringify(webhookPayload, null, 2));
     
-    // Send webhook to n8n
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(webhookPayload),
-    });
+    // Send webhook to n8n with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    if (!webhookResponse.ok) {
-      console.error('Webhook failed:', webhookResponse.status, webhookResponse.statusText);
-      throw new Error(`Webhook failed: ${webhookResponse.status}`);
+    try {
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text();
+        console.error('❌ Webhook failed:', webhookResponse.status, webhookResponse.statusText, errorText);
+        throw new Error(`Webhook failed: ${webhookResponse.status} - ${errorText}`);
+      }
+
+      const responseData = await webhookResponse.text();
+      console.log('✅ Webhook sent successfully, response:', responseData);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Webhook sent successfully',
+          status: webhookResponse.status,
+          response: responseData
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('❌ Webhook timeout');
+        throw new Error('Webhook timeout after 30 seconds');
+      }
+      throw fetchError;
     }
 
-    console.log('Webhook sent successfully');
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Webhook sent successfully',
-        status: webhookResponse.status 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('Error in send-form-webhook function:', error);
+    console.error('❌ Error in send-form-webhook function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message,
+        stack: error.stack
       }),
       {
         status: 500,

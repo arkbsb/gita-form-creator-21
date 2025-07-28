@@ -299,12 +299,20 @@ const CreateEditForm = () => {
       console.log('🚀 Action:', formId ? 'update' : 'create');
       
       try {
-        const webhookResponse = await supabase.functions.invoke('send-form-webhook', {
-          body: { 
-            formId: savedFormId, 
-            action: formId ? 'update' : 'create' 
-          }
+        // Aguardar um pouco para garantir que os dados foram salvos
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const webhookResponse = await fetch('/api/webhook/form', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            formId: savedFormId,
+            action: formId ? 'update' : 'create'
+          })
         });
+        
         console.log('✅ Webhook enviado com sucesso:', webhookResponse);
       } catch (webhookError) {
         console.error('❌ Erro ao enviar webhook:', webhookError);

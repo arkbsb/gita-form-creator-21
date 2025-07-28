@@ -313,8 +313,14 @@ const PublicForm = () => {
 
       // Enviar webhook para n8n (adicionar resposta)
       try {
-        await supabase.functions.invoke('send-submission-webhook', {
-          body: { submissionId: submission.id }
+        await fetch('/api/webhook/submission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            submissionId: submission.id
+          })
         });
         console.log('Webhook de submissão enviado com sucesso');
       } catch (webhookError) {

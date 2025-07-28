@@ -15,11 +15,11 @@ serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { submissionId } = await req.json();
-    console.log(`Processing submission webhook for submission ${submissionId}`);
+    console.log(`📝 Processing submission webhook for submission ${submissionId}`);
 
     // Get submission data with form info and field responses
     const { data: submission, error: submissionError } = await supabase
@@ -29,104 +29,139 @@ serve(async (req) => {
         forms!inner(
           id,
           title,
-          user_id
+          user_id,
+          webhook_url
         )
       `)
       .eq('id', submissionId)
       .maybeSingle();
 
     if (submissionError) {
-      console.error('Error fetching submission:', submissionError);
+      console.error('❌ Error fetching submission:', submissionError);
       throw submissionError;
     }
 
     if (!submission) {
-      console.log('Submission not found:', submissionId);
+      console.log('❌ Submission not found:', submissionId);
       return new Response(
         JSON.stringify({ success: false, message: 'Submission not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
-    // Get field responses
+    // Get field responses with field information
     const { data: fieldResponses, error: responsesError } = await supabase
       .from('form_field_responses')
       .select(`
         *,
         form_fields!inner(
+          id,
           label,
           type,
-          options
+          options,
+          order_index
         )
       `)
-      .eq('submission_id', submissionId);
+      .eq('submission_id', submissionId)
+      .order('form_fields(order_index)');
 
     if (responsesError) {
-      console.error('Error fetching field responses:', responsesError);
+      console.error('❌ Error fetching field responses:', responsesError);
       throw responsesError;
     }
 
-    // URL fixo para submissões de formulários
-    const webhookUrl = 'https://autowebhook.gita.work/webhook/adicionar-resposta-forms';
-    console.log(`Sending submission webhook for submission ${submissionId} to ${webhookUrl}`);
+    // Check if form has Google Sheets integration
+    let spreadsheetId = null;
+    if (submission.forms.webhook_url) {
+      try {
+        const webhookData = JSON.parse(submission.forms.webhook_url);
+        spreadsheetId = webhookData?.sheets?.spreadsheetId;
+      } catch (error) {
+        console.log('⚠️ Could not parse webhook_url as JSON, treating as regular webhook');
+      }
+    }
+
+    // URL do webhook n8n para adicionar resposta
+    const webhookUrl = 'https://auto.gita.work/webhook/adicionar-resposta-forms';
+    console.log(`📡 Sending submission webhook for submission ${submissionId} to ${webhookUrl}`);
+
+    // Prepare responses in the format expected by n8n
+    const responses = fieldResponses?.map(response => ({
+      questionId: response.form_fields.id,
+      question: response.form_fields.label,
+      answer: response.value || '',
+      fieldType: response.form_fields.type,
+      fieldOptions: response.form_fields.options
+    })) || [];
 
     // Prepare webhook payload
     const webhookPayload = {
-      action: 'submission',
-      timestamp: new Date().toISOString(),
-      form: {
-        id: submission.forms.id,
-        title: submission.forms.title
-      },
-      submission: {
-        id: submission.id,
-        submitted_at: submission.submitted_at,
-        submitted_by_email: submission.submitted_by_email,
-        ip_address: submission.ip_address,
-        user_agent: submission.user_agent
-      },
-      responses: fieldResponses?.map(response => ({
-        field_label: response.form_fields.label,
-        field_type: response.form_fields.type,
-        field_options: response.form_fields.options,
-        value: response.value,
-        file_url: response.file_url
-      })) || []
+      spreadsheetId: spreadsheetId,
+      formId: submission.forms.id,
+      formTitle: submission.forms.title,
+      submissionId: submission.id,
+      submittedAt: submission.submitted_at,
+      submittedByEmail: submission.submitted_by_email,
+      responses: responses,
+      timestamp: new Date().toISOString()
     };
 
-    console.log('Sending submission webhook to:', webhookUrl);
+    console.log('📤 Sending submission webhook payload:', JSON.stringify(webhookPayload, null, 2));
     
-    // Send webhook to n8n
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(webhookPayload),
-    });
+    // Send webhook to n8n with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    if (!webhookResponse.ok) {
-      console.error('Webhook failed:', webhookResponse.status, webhookResponse.statusText);
-      throw new Error(`Webhook failed: ${webhookResponse.status}`);
+    try {
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text();
+        console.error('❌ Submission webhook failed:', webhookResponse.status, webhookResponse.statusText, errorText);
+        throw new Error(`Submission webhook failed: ${webhookResponse.status} - ${errorText}`);
+      }
+
+      const responseData = await webhookResponse.text();
+      console.log('✅ Submission webhook sent successfully, response:', responseData);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Submission webhook sent successfully',
+          status: webhookResponse.status,
+          response: responseData
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('❌ Submission webhook timeout');
+        throw new Error('Submission webhook timeout after 30 seconds');
+      }
+      throw fetchError;
     }
 
-    console.log('Submission webhook sent successfully');
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Submission webhook sent successfully',
-        status: webhookResponse.status 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('Error in send-submission-webhook function:', error);
+    console.error('❌ Error in send-submission-webhook function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message,
+        stack: error.stack
       }),
       {
         status: 500,
