@@ -63,6 +63,7 @@ const CreateEditForm = () => {
   const { createSpreadsheet, getSheetsStatus } = useGoogleSheetsIntegration();
 
   useEffect(() => {
+    console.log('CreateEditForm mounted, formId:', formId);
     if (formId) {
       loadForm();
     }
@@ -71,8 +72,12 @@ const CreateEditForm = () => {
 
   const fetchFolders = async () => {
     try {
+      console.log('Fetching folders...');
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      if (!user.user) {
+        console.log('No user found');
+        return;
+      }
 
       const { data, error } = await supabase
         .from("folders")
@@ -81,6 +86,7 @@ const CreateEditForm = () => {
         .order("order_index");
 
       if (error) throw error;
+      console.log('Folders fetched:', data);
       setFolders(data || []);
     } catch (error) {
       console.error("Erro ao buscar pastas:", error);
@@ -88,6 +94,7 @@ const CreateEditForm = () => {
   };
 
   const loadForm = async () => {
+    console.log('Loading form with ID:', formId);
     setLoading(true);
     try {
       const { data: form, error: formError } = await supabase
@@ -96,7 +103,11 @@ const CreateEditForm = () => {
         .eq('id', formId)
         .single();
 
-      if (formError) throw formError;
+      console.log('Form loaded:', form);
+      if (formError) {
+        console.error('Form error:', formError);
+        throw formError;
+      }
 
       const { data: fields, error: fieldsError } = await supabase
         .from('form_fields')
@@ -354,6 +365,8 @@ const CreateEditForm = () => {
     );
   }
 
+  console.log('Rendering CreateEditForm, loading:', loading, 'formData:', formData);
+  
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
