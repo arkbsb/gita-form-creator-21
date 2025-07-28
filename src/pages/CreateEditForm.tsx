@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, ArrowLeft, Save } from "lucide-react";
+import { Plus, Trash2, GripVertical, ArrowLeft, Save, Palette, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useGoogleSheetsIntegration } from "@/hooks/useGoogleSheetsIntegration";
 
 interface FormField {
   id: string;
@@ -27,6 +28,10 @@ interface FormData {
   description: string;
   is_sequential: boolean;
   allow_multiple_submissions: boolean;
+  is_published: boolean;
+  theme_color: string;
+  success_message: string;
+  submit_button_text: string;
   fields: FormField[];
 }
 
@@ -40,8 +45,13 @@ const CreateEditForm = () => {
     description: "",
     is_sequential: false,
     allow_multiple_submissions: true,
+    is_published: false,
+    theme_color: "#6366f1",
+    success_message: "Obrigado por sua resposta!",
+    submit_button_text: "Enviar",
     fields: []
   });
+  const { createSpreadsheet, getSheetsStatus } = useGoogleSheetsIntegration();
 
   useEffect(() => {
     if (formId) {
@@ -73,6 +83,10 @@ const CreateEditForm = () => {
         description: form.description || "",
         is_sequential: false, // Not in database schema
         allow_multiple_submissions: form.allow_multiple_submissions !== false,
+        is_published: form.is_published,
+        theme_color: form.theme_color || "#6366f1",
+        success_message: form.success_message || "Obrigado por sua resposta!",
+        submit_button_text: form.submit_button_text || "Enviar",
         fields: (fields || []).map(field => ({
           id: field.id,
           type: field.type,
@@ -190,7 +204,11 @@ const CreateEditForm = () => {
           .update({
             title: formData.title,
             description: formData.description,
-            allow_multiple_submissions: formData.allow_multiple_submissions
+            allow_multiple_submissions: formData.allow_multiple_submissions,
+            is_published: formData.is_published,
+            theme_color: formData.theme_color,
+            success_message: formData.success_message,
+            submit_button_text: formData.submit_button_text
           })
           .eq('id', formId);
 
@@ -213,6 +231,10 @@ const CreateEditForm = () => {
             title: formData.title,
             description: formData.description,
             allow_multiple_submissions: formData.allow_multiple_submissions,
+            is_published: formData.is_published,
+            theme_color: formData.theme_color,
+            success_message: formData.success_message,
+            submit_button_text: formData.submit_button_text,
             slug: `form-${Date.now()}`,
             user_id: user?.id
           })
@@ -240,6 +262,27 @@ const CreateEditForm = () => {
           .insert(fieldsToInsert);
 
         if (fieldsError) throw fieldsError;
+      }
+
+      // Criar planilha no Google Sheets se formulário for novo e estiver publicado
+      if (!formId && formData.is_published && formData.fields.length > 0) {
+        try {
+          const questions = formData.fields.map(field => ({
+            id: field.id,
+            title: field.label,
+            question: field.label,
+            type: field.type
+          }));
+          
+          await createSpreadsheet(savedFormId, formData.title, questions);
+        } catch (error) {
+          console.error('Erro ao criar planilha:', error);
+          toast({
+            title: "Aviso",
+            description: "Formulário criado, mas houve erro ao criar a planilha no Google Sheets.",
+            variant: "destructive"
+          });
+        }
       }
 
       toast({
@@ -284,10 +327,22 @@ const CreateEditForm = () => {
               {formId ? 'Editar Formulário' : 'Criar Formulário'}
             </h1>
           </div>
-          <Button onClick={saveForm} disabled={loading}>
-            <Save className="h-4 w-4 mr-2" />
-            Salvar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={saveForm} disabled={loading}>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Rascunho
+            </Button>
+            <Button 
+              onClick={() => {
+                setFormData(prev => ({ ...prev, is_published: true }));
+                setTimeout(saveForm, 100);
+              }} 
+              disabled={loading}
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Publicar
+            </Button>
+          </div>
         </div>
 
         {/* Form Configuration */}
@@ -332,6 +387,65 @@ const CreateEditForm = () => {
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, allow_multiple_submissions: checked }))}
               />
               <Label htmlFor="multiple">Permitir múltiplas submissões</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="published"
+                checked={formData.is_published}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_published: checked }))}
+              />
+              <Label htmlFor="published">Formulário publicado</Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Personalização */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Personalização
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="theme_color">Cor do Tema</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="theme_color"
+                  type="color"
+                  value={formData.theme_color}
+                  onChange={(e) => setFormData(prev => ({ ...prev, theme_color: e.target.value }))}
+                  className="w-16 h-10"
+                />
+                <Input
+                  value={formData.theme_color}
+                  onChange={(e) => setFormData(prev => ({ ...prev, theme_color: e.target.value }))}
+                  placeholder="#6366f1"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="success_message">Mensagem de Sucesso</Label>
+              <Textarea
+                id="success_message"
+                value={formData.success_message}
+                onChange={(e) => setFormData(prev => ({ ...prev, success_message: e.target.value }))}
+                placeholder="Obrigado por sua resposta!"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="submit_button_text">Texto do Botão de Envio</Label>
+              <Input
+                id="submit_button_text"
+                value={formData.submit_button_text}
+                onChange={(e) => setFormData(prev => ({ ...prev, submit_button_text: e.target.value }))}
+                placeholder="Enviar"
+              />
             </div>
           </CardContent>
         </Card>
