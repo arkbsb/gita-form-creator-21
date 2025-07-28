@@ -5,8 +5,8 @@ set -e
 APP_BASE_URL=${APP_BASE_URL:-""}
 
 # Create the config.js file with environment variables
-mkdir -p /usr/share/nginx/html
-cat > /usr/share/nginx/html/config.js << EOF
+mkdir -p /app/dist
+cat > /app/dist/config.js << EOF
 window.__APP_BASE_URL__ = "${APP_BASE_URL}";
 EOF
 
