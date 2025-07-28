@@ -64,26 +64,18 @@ export function FormsDragDrop({
   }
 
   return (
-    <Droppable droppableId="forms">
-      {(provided, snapshot) => (
-        <div
-          {...provided.droppableProps}
-          ref={provided.innerRef}
-          className={`grid gap-6 md:grid-cols-2 lg:grid-cols-3 transition-colors ${
-            snapshot.isDraggingOver ? 'bg-muted/20 rounded-lg p-4' : ''
-          }`}
-        >
-          {filteredForms.map((form, index) => (
-            <Draggable key={form.id} draggableId={form.id} index={index}>
-              {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                    className={`transition-transform ${
-                      snapshot.isDragging ? 'rotate-2 scale-105 shadow-lg' : ''
-                    }`}
-                  >
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {filteredForms.map((form, index) => (
+        <Draggable key={form.id} draggableId={form.id} index={index}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              className={`transition-transform ${
+                snapshot.isDragging ? 'rotate-2 scale-105 shadow-lg' : ''
+              }`}
+            >
                     <Card className="h-full cursor-grab active:cursor-grabbing">
                       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                         <div className="space-y-1 flex-1">
@@ -157,9 +149,6 @@ export function FormsDragDrop({
                 )}
               </Draggable>
           ))}
-          {provided.placeholder}
-        </div>
-      )}
-    </Droppable>
-  );
-}
+      </div>
+    );
+  }

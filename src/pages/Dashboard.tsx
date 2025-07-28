@@ -27,7 +27,7 @@ import {
   Loader2,
   Sheet
 } from "lucide-react";
-import { DragDropContext } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import InviteManager from "@/components/InviteManager";
 import { FolderSidebar } from "@/components/FolderSidebar";
 import { FolderBreadcrumb } from "@/components/FolderBreadcrumb";
@@ -205,14 +205,20 @@ const Dashboard = () => {
   };
 
   const handleFormMove = async (formId: string, targetFolderId: string | null) => {
+    console.log('🚀 Moving form:', formId, 'to folder:', targetFolderId);
+    
     try {
       const { error } = await supabase
         .from('forms')
         .update({ folder_id: targetFolderId })
         .eq('id', formId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
 
+      console.log('✅ Form moved successfully');
       fetchForms();
       toast({
         title: "Formulário movido!",
@@ -231,11 +237,20 @@ const Dashboard = () => {
   };
 
   const handleDragEnd = async (result: any) => {
-    if (!result.destination) return;
+    console.log('🎯 Drag ended:', result);
+    console.log('🎯 Source:', result.source);
+    console.log('🎯 Destination:', result.destination);
+    
+    if (!result.destination) {
+      console.log('❌ No destination, drag cancelled');
+      return;
+    }
 
     // Se é um formulário sendo arrastado
-    if (result.type === 'FORM' || result.source.droppableId === 'forms') {
+    if (result.source.droppableId === 'forms-area') {
+      console.log('📋 Moving form from forms area');
       const targetFolderId = result.destination.droppableId === 'root' ? null : result.destination.droppableId;
+      console.log('📋 Target folder ID:', targetFolderId);
       await handleFormMove(result.draggableId, targetFolderId);
       return;
     }
@@ -611,14 +626,27 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     ) : (
-                      <FormsDragDrop
-                        forms={forms}
-                        onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
-                        onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
-                        onDeleteForm={handleDeleteForm}
-                        onCopyLink={copyFormLink}
-                        selectedFolderId={selectedFolderId}
-                      />
+                      <Droppable droppableId="forms-area">
+                        {(provided, snapshot) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className={`transition-colors ${
+                              snapshot.isDraggingOver ? 'bg-muted/20 rounded-lg p-4' : ''
+                            }`}
+                          >
+                            <FormsDragDrop
+                              forms={forms}
+                              onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
+                              onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
+                              onDeleteForm={handleDeleteForm}
+                              onCopyLink={copyFormLink}
+                              selectedFolderId={selectedFolderId}
+                            />
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
                     )}
                   </div>
                 </div>
