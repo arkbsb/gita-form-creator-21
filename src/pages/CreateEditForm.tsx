@@ -95,6 +95,7 @@ const fieldTypes = [
 ];
 
 const CreateEditForm = () => {
+  console.log('🚀 CreateEditForm component initialized');
   const { formId } = useParams();
   const isEditing = Boolean(formId);
   const [user, setUser] = useState<User | null>(null);
@@ -140,25 +141,30 @@ const CreateEditForm = () => {
   const [editorTab, setEditorTab] = useState<'editor' | 'options'>('editor');
 
   useEffect(() => {
+    console.log('🔄 Auth useEffect triggered');
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('🔑 Auth state changed:', event, !!session);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         
         if (!session?.user) {
+          console.log('❌ No user, redirecting to auth');
           navigate('/auth');
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔍 Checking existing session:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       
       if (!session?.user) {
+        console.log('❌ No existing session, redirecting to auth');
         navigate('/auth');
       }
     });
@@ -167,6 +173,7 @@ const CreateEditForm = () => {
   }, [navigate]);
 
   useEffect(() => {
+    console.log('🔄 Form data useEffect - isEditing:', isEditing, 'user:', !!user, 'formId:', formId);
     if (isEditing && user) {
       loadFormData();
     }
@@ -574,7 +581,12 @@ const CreateEditForm = () => {
     }
   };
 
+  console.log('🔍 CreateEditForm render - loading:', loading);
+  console.log('🔍 CreateEditForm render - user:', user);
+  console.log('🔍 CreateEditForm render - formData:', formData);
+
   if (loading) {
+    console.log('⏳ Still loading...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -584,6 +596,8 @@ const CreateEditForm = () => {
       </div>
     );
   }
+
+  console.log('✅ Rendering main form editor');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-form-builder-bg to-accent/20">
