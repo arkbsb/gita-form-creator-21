@@ -14,7 +14,6 @@ import { CheckCircle, Loader2, FormInput } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
-import { useGoogleSheetsIntegration } from "@/hooks/useGoogleSheetsIntegration";
 
 interface FormData {
   id: string;
@@ -69,7 +68,6 @@ const PublicForm = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { sendResponseToSheet, getSheetsStatus } = useGoogleSheetsIntegration();
   
   const [form, setForm] = useState<FormData | null>(null);
   const [fields, setFields] = useState<FormField[]>([]);
@@ -313,62 +311,15 @@ const PublicForm = () => {
         throw responsesError;
       }
 
-      // Send webhook if configured
-      if (form!.webhook_url) {
-        try {
-          await fetch(form!.webhook_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            mode: 'no-cors',
-            body: JSON.stringify({
-              form_id: form!.id,
-              form_title: form!.title,
-              submission_id: submission.id,
-              submitted_at: submission.submitted_at,
-              responses: responses,
-            }),
-          });
-        } catch (webhookError) {
-          console.error('Webhook error:', webhookError);
-        }
-      }
-
-      // Integração automática com Google Sheets
-      console.log('Form webhook_url para Google Sheets:', form!.webhook_url);
-      const sheetsStatus = getSheetsStatus(form!.webhook_url);
-      console.log('Status da integração Google Sheets:', sheetsStatus);
-      
-      if (sheetsStatus.spreadsheetId) {
-        try {
-          console.log('Enviando resposta para planilha:', sheetsStatus.spreadsheetId);
-          const formattedResponses = fields.map(field => ({
-            questionId: field.id,
-            question: field.label,
-            answer: Array.isArray(responses[field.id]) 
-              ? (responses[field.id] as string[]).join(', ')
-              : (responses[field.id] as string) || ''
-          }));
-
-          // Enviar para Google Sheets em background
-          sendResponseToSheet(
-            sheetsStatus.spreadsheetId,
-            form!.id,
-            formattedResponses,
-            new Date().toISOString()
-          );
-        } catch (sheetsError) {
-          console.error('Erro ao sincronizar com Google Sheets:', sheetsError);
-        }
-      } else {
-        console.log('Spreadsheet ID não encontrado, pulando integração Google Sheets');
-        console.log('Detalhes do status:', JSON.stringify(sheetsStatus, null, 2));
-        
-        // Se não há spreadsheetId, verificar se o webhook_url está no formato antigo
-        if (form!.webhook_url && !form!.webhook_url.includes('spreadsheetId')) {
-          console.log('Webhook URL parece estar no formato antigo (apenas URL)');
-        }
+      // Enviar webhook para n8n (adicionar resposta)
+      try {
+        await supabase.functions.invoke('send-submission-webhook', {
+          body: { submissionId: submission.id }
+        });
+        console.log('Webhook de submissão enviado com sucesso');
+      } catch (webhookError) {
+        console.error('Erro ao enviar webhook de submissão:', webhookError);
+        // Não mostrar erro para o usuário, pois a submissão foi bem-sucedida
       }
 
       setSubmitted(true);

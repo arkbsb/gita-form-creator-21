@@ -29,11 +29,19 @@ serve(async (req) => {
         form_fields(*)
       `)
       .eq('id', formId)
-      .single();
+      .maybeSingle();
 
     if (formError) {
       console.error('Error fetching form:', formError);
       throw formError;
+    }
+
+    if (!form) {
+      console.log('Form not found:', formId);
+      return new Response(
+        JSON.stringify({ success: false, message: 'Form not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // URL fixo para criação/atualização de formulários

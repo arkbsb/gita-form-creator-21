@@ -33,11 +33,19 @@ serve(async (req) => {
         )
       `)
       .eq('id', submissionId)
-      .single();
+      .maybeSingle();
 
     if (submissionError) {
       console.error('Error fetching submission:', submissionError);
       throw submissionError;
+    }
+
+    if (!submission) {
+      console.log('Submission not found:', submissionId);
+      return new Response(
+        JSON.stringify({ success: false, message: 'Submission not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get field responses
