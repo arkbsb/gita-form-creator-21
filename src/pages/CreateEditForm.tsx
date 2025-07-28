@@ -388,14 +388,14 @@ const CreateEditForm = () => {
             <div>
               <Label htmlFor="folder">Pasta do Formulário</Label>
               <Select
-                value={formData.folder_id || ""}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, folder_id: value || null }))}
+                value={formData.folder_id || "root"}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, folder_id: value === "root" ? null : value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma pasta (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Raiz (sem pasta)</SelectItem>
+                  <SelectItem value="root">Raiz (sem pasta)</SelectItem>
                   {folders.map((folder) => (
                     <SelectItem key={folder.id} value={folder.id}>
                       {folder.name}
