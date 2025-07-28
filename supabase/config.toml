@@ -1,1 +1,15 @@
 project_id = "bepkixkvoxekafvuyxks"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://lovable.app"]
+
+[auth.email]
+enabled = true
+
+[functions.send-form-webhook]
+verify_jwt = false
+
+[functions.send-submission-webhook]
+verify_jwt = false

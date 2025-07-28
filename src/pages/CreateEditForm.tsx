@@ -33,6 +33,7 @@ interface FormData {
   welcome_button_text?: string;
   show_welcome_screen?: boolean;
   folder_id?: string | null;
+  webhook_url?: string;
   fields: FormField[];
 }
 
@@ -54,6 +55,7 @@ const CreateEditForm = () => {
     welcome_button_text: "Começar",
     show_welcome_screen: false,
     folder_id: null,
+    webhook_url: "",
     fields: []
   });
 
@@ -114,6 +116,7 @@ const CreateEditForm = () => {
         welcome_button_text: form.welcome_button_text || "Começar",
         show_welcome_screen: form.show_welcome_screen || false,
         folder_id: form.folder_id || null,
+        webhook_url: form.webhook_url || "",
         fields: (fields || []).map(field => ({
           id: field.id,
           type: field.type,
@@ -221,7 +224,8 @@ const CreateEditForm = () => {
             welcome_message: formData.welcome_message,
             welcome_button_text: formData.welcome_button_text,
             show_welcome_screen: formData.show_welcome_screen,
-            folder_id: formData.folder_id
+            folder_id: formData.folder_id,
+            webhook_url: formData.webhook_url
           })
           .eq('id', formId);
 
@@ -252,6 +256,7 @@ const CreateEditForm = () => {
             welcome_button_text: formData.welcome_button_text,
             show_welcome_screen: formData.show_welcome_screen,
             folder_id: formData.folder_id,
+            webhook_url: formData.webhook_url,
             slug: `form-${Date.now()}`,
             user_id: user?.id
           })
@@ -285,6 +290,22 @@ const CreateEditForm = () => {
         title: "Sucesso",
         description: formId ? "Formulário atualizado com sucesso!" : "Formulário criado com sucesso!"
       });
+
+      // Enviar webhook para n8n se configurado
+      if (formData.webhook_url) {
+        try {
+          await supabase.functions.invoke('send-form-webhook', {
+            body: { 
+              formId: savedFormId, 
+              action: formId ? 'update' : 'create' 
+            }
+          });
+          console.log('Webhook enviado com sucesso');
+        } catch (webhookError) {
+          console.error('Erro ao enviar webhook:', webhookError);
+          // Não mostrar erro de webhook para o usuário, pois o formulário foi salvo com sucesso
+        }
+      }
 
       navigate('/dashboard');
     } catch (error) {
@@ -487,6 +508,30 @@ const CreateEditForm = () => {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Integração com n8n */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              Integração com n8n
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="webhook_url">URL do Webhook n8n</Label>
+              <Input
+                id="webhook_url"
+                value={formData.webhook_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, webhook_url: e.target.value }))}
+                placeholder="https://seu-n8n.com/webhook/url"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Este webhook será chamado quando o formulário for criado/atualizado e quando receber respostas
+              </p>
+            </div>
           </CardContent>
         </Card>
 
