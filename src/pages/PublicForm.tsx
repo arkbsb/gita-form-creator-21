@@ -29,9 +29,8 @@ interface FormData {
   is_published: boolean;
   webhook_url: string | null;
   // Campos de boas-vindas
-  welcome_enabled?: boolean;
-  welcome_title?: string;
-  welcome_description?: string;
+  show_welcome_screen?: boolean;
+  welcome_message?: string;
   welcome_button_text?: string;
 }
 
@@ -126,36 +125,17 @@ const PublicForm = () => {
       console.log('✅ Formulário encontrado:', formData);
       setDebugInfo(`Formulário encontrado: ${formData.title}`);
 
-      // Parse webhook_url para extrair configurações de boas-vindas
-      let parsedFormData: FormData = formData as FormData;
-      console.log('🔍 webhook_url original:', formData.webhook_url);
+      // Configurar dados do formulário diretamente do banco
+      const parsedFormData: FormData = {
+        ...formData,
+        show_welcome_screen: formData.show_welcome_screen || false,
+        welcome_message: formData.welcome_message || '',
+        welcome_button_text: formData.welcome_button_text || 'Começar'
+      } as FormData;
       
-      if (formData.webhook_url) {
-        try {
-          const webhookData = JSON.parse(formData.webhook_url);
-          
-          if (typeof webhookData === 'object' && webhookData !== null) {
-            // Novo formato: configurações dentro de 'settings'
-            const settings = webhookData.settings || {};
-            
-            parsedFormData = {
-              ...formData,
-              welcome_enabled: settings.welcome_enabled || false,
-              welcome_title: settings.welcome_title || 'Bem-vindo!',
-              welcome_description: settings.welcome_description || 'Por favor, preencha o formulário abaixo.',
-              welcome_button_text: settings.welcome_button_text || 'Começar'
-            } as FormData;
-            
-            console.log('🔍 Settings extraídas:', settings);
-          }
-        } catch (error) {
-          // Se não conseguir fazer parse, mantém os dados originais
-          console.log('Debug - webhook URL não é JSON válido, usando configurações padrão:', error);
-        }
-      }
-
       console.log('🔍 parsedFormData final:', parsedFormData);
-      console.log('🔍 welcome_enabled:', parsedFormData.welcome_enabled);
+      console.log('🔍 show_welcome_screen:', parsedFormData.show_welcome_screen);
+      console.log('🔍 welcome_message:', parsedFormData.welcome_message);
       console.log('🔍 showWelcome state atual:', showWelcome);
 
       setForm(parsedFormData);
@@ -889,7 +869,7 @@ const PublicForm = () => {
   }
 
   // Mostrar tela de boas-vindas se habilitada
-  if (form?.welcome_enabled && showWelcome) {
+  if (form?.show_welcome_screen && showWelcome && form.welcome_message) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center p-4">
         <div className="w-full max-w-2xl mx-auto">
@@ -898,10 +878,10 @@ const PublicForm = () => {
               <div className="space-y-6">
                 <div className="space-y-4">
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-                    {form.welcome_title}
+                    {form.title}
                   </h1>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    {form.welcome_description}
+                  <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {form.welcome_message}
                   </p>
                 </div>
                 
