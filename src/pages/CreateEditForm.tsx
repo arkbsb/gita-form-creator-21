@@ -32,6 +32,9 @@ interface FormData {
   theme_color: string;
   success_message: string;
   submit_button_text: string;
+  welcome_message?: string;
+  welcome_button_text?: string;
+  show_welcome_screen?: boolean;
   fields: FormField[];
 }
 
@@ -49,6 +52,9 @@ const CreateEditForm = () => {
     theme_color: "#6366f1",
     success_message: "Obrigado por sua resposta!",
     submit_button_text: "Enviar",
+    welcome_message: "",
+    welcome_button_text: "Começar",
+    show_welcome_screen: false,
     fields: []
   });
   const { createSpreadsheet, getSheetsStatus } = useGoogleSheetsIntegration();
@@ -447,6 +453,39 @@ const CreateEditForm = () => {
                 placeholder="Enviar"
               />
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="welcome_screen"
+                checked={formData.show_welcome_screen}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, show_welcome_screen: checked }))}
+              />
+              <Label htmlFor="welcome_screen">Exibir tela de boas vindas</Label>
+            </div>
+
+            {formData.show_welcome_screen && (
+              <>
+                <div>
+                  <Label htmlFor="welcome_message">Mensagem de Boas Vindas</Label>
+                  <Textarea
+                    id="welcome_message"
+                    value={formData.welcome_message}
+                    onChange={(e) => setFormData(prev => ({ ...prev, welcome_message: e.target.value }))}
+                    placeholder="Bem-vindo! Esta é uma mensagem introdutória que aparecerá antes do formulário."
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="welcome_button_text">Texto do Botão de Início</Label>
+                  <Input
+                    id="welcome_button_text"
+                    value={formData.welcome_button_text}
+                    onChange={(e) => setFormData(prev => ({ ...prev, welcome_button_text: e.target.value }))}
+                    placeholder="Começar"
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
