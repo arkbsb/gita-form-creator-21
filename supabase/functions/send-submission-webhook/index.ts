@@ -29,7 +29,6 @@ serve(async (req) => {
         forms!inner(
           id,
           title,
-          webhook_url,
           user_id
         )
       `)
@@ -59,14 +58,9 @@ serve(async (req) => {
       throw responsesError;
     }
 
-    // Only send webhook if URL is configured
-    if (!submission.forms.webhook_url) {
-      console.log('No webhook URL configured for form');
-      return new Response(
-        JSON.stringify({ success: true, message: 'No webhook configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // URL fixo para submissões de formulários
+    const webhookUrl = 'https://autowebhook.gita.work/webhook/adicionar-resposta-forms';
+    console.log(`Sending submission webhook for submission ${submissionId} to ${webhookUrl}`);
 
     // Prepare webhook payload
     const webhookPayload = {
@@ -92,10 +86,10 @@ serve(async (req) => {
       })) || []
     };
 
-    console.log('Sending submission webhook to:', submission.forms.webhook_url);
+    console.log('Sending submission webhook to:', webhookUrl);
     
     // Send webhook to n8n
-    const webhookResponse = await fetch(submission.forms.webhook_url, {
+    const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -36,14 +36,9 @@ serve(async (req) => {
       throw formError;
     }
 
-    // Only send webhook if URL is configured
-    if (!form.webhook_url) {
-      console.log('No webhook URL configured for form');
-      return new Response(
-        JSON.stringify({ success: true, message: 'No webhook configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // URL fixo para criação/atualização de formulários
+    const webhookUrl = 'https://autowebhook.gita.work/webhook/criar-planilha-forms';
+    console.log(`Sending webhook for form ${formId} with action: ${action} to ${webhookUrl}`);
 
     // Prepare webhook payload
     const webhookPayload = {
@@ -76,10 +71,10 @@ serve(async (req) => {
       })) || []
     };
 
-    console.log('Sending webhook to:', form.webhook_url);
+    console.log('Sending webhook to:', webhookUrl);
     
     // Send webhook to n8n
-    const webhookResponse = await fetch(form.webhook_url, {
+    const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
