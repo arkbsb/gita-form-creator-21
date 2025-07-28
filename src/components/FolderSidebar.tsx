@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { Droppable, Draggable } from "@hello-pangea/dnd";
 
 interface FolderType {
   id: string;
@@ -147,7 +147,6 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
     setExpandedFolders(newExpanded);
   };
 
-
   const rootFormCount = formCounts['root'] || 0;
 
   return (
@@ -219,86 +218,96 @@ export function FolderSidebar({ selectedFolderId, onFolderSelect, onFolderUpdate
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef}>
                 {localFolders.map((folder, index) => (
-                    <Draggable key={folder.id} draggableId={folder.id} index={index}>
-                      {(provided, snapshot) => (
+                  <Draggable key={folder.id} draggableId={folder.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`group mb-1 ${snapshot.isDragging ? 'opacity-50' : ''}`}
+                      >
                         <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`group mb-1 ${snapshot.isDragging ? 'opacity-50' : ''}`}
+                          className={`flex items-center justify-between p-2 rounded-md transition-colors ${
+                            selectedFolderId === folder.id 
+                              ? "bg-primary text-primary-foreground" 
+                              : "hover:bg-muted"
+                          }`}
                         >
-                          {/* Droppable zone for each folder */}
-                          <Droppable droppableId={folder.id}>
-                            {(droppableProvided, droppableSnapshot) => (
-                              <div
-                                {...droppableProvided.droppableProps}
-                                ref={droppableProvided.innerRef}
-                                className={`transition-colors ${droppableSnapshot.isDraggingOver ? 'bg-muted/20 rounded-lg' : ''}`}
-                              >
-                                <div
-                                  className={`flex items-center justify-between p-2 rounded-md transition-colors ${
-                                    selectedFolderId === folder.id 
-                                      ? "bg-primary text-primary-foreground" 
-                                      : "hover:bg-muted"
-                                  }`}
+                          <button
+                            onClick={() => onFolderSelect(folder.id)}
+                            className="flex items-center space-x-2 flex-1 text-left"
+                          >
+                            <div {...provided.dragHandleProps} className="cursor-grab">
+                              <Folder className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm truncate">{folder.name}</span>
+                          </button>
+                          
+                          <div className="flex items-center space-x-1">
+                            <span className="text-xs bg-muted-foreground/20 px-2 py-1 rounded">
+                              {formCounts[folder.id] || 0}
+                            </span>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
                                 >
-                                  <button
-                                    onClick={() => onFolderSelect(folder.id)}
-                                    className="flex items-center space-x-2 flex-1 text-left"
-                                  >
-                                    <div {...provided.dragHandleProps} className="cursor-grab">
-                                      <Folder className="h-4 w-4" />
-                                    </div>
-                                    <span className="text-sm truncate">{folder.name}</span>
-                                  </button>
-                                  
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-xs bg-muted-foreground/20 px-2 py-1 rounded">
-                                      {formCounts[folder.id] || 0}
-                                    </span>
-                                    
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm" 
-                                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                                        >
-                                          <MoreHorizontal className="h-3 w-3" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem 
-                                          onClick={() => {
-                                            setEditingFolder({ id: folder.id, name: folder.name });
-                                            setIsEditDialogOpen(true);
-                                          }}
-                                        >
-                                          <Edit className="h-4 w-4 mr-2" />
-                                          Renomear
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                          onClick={() => deleteFolder(folder.id)}
-                                          className="text-destructive"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Deletar
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                </div>
-                                {droppableProvided.placeholder}
-                              </div>
-                            )}
-                          </Droppable>
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setEditingFolder({ id: folder.id, name: folder.name });
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Renomear
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => deleteFolder(folder.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Deletar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
-                      )}
-                    </Draggable>
-                  ))}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+          
+          {/* Individual folder drop zones */}
+          {localFolders.map((folder) => (
+            <Droppable key={`folder-drop-${folder.id}`} droppableId={folder.id}>
+              {(provided, snapshot) => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className={`mt-1 min-h-[2px] transition-colors ${
+                    snapshot.isDraggingOver ? 'bg-primary/20 rounded-lg min-h-[40px] border-2 border-dashed border-primary' : ''
+                  }`}
+                >
+                  {snapshot.isDraggingOver && (
+                    <div className="flex items-center justify-center h-10 text-sm text-primary">
+                      Solte aqui para mover para "{folder.name}"
+                    </div>
+                  )}
                   {provided.placeholder}
                 </div>
               )}
             </Droppable>
+          ))}
         </div>
       </ScrollArea>
 
