@@ -287,16 +287,21 @@ const CreateEditForm = () => {
       });
 
       // Enviar webhook para n8n
+      console.log('🚀 Tentando enviar webhook para n8n...');
+      console.log('🚀 savedFormId:', savedFormId);
+      console.log('🚀 formId original:', formId);
+      console.log('🚀 Action:', formId ? 'update' : 'create');
+      
       try {
-        await supabase.functions.invoke('send-form-webhook', {
+        const webhookResponse = await supabase.functions.invoke('send-form-webhook', {
           body: { 
             formId: savedFormId, 
             action: formId ? 'update' : 'create' 
           }
         });
-        console.log('Webhook enviado com sucesso');
+        console.log('✅ Webhook enviado com sucesso:', webhookResponse);
       } catch (webhookError) {
-        console.error('Erro ao enviar webhook:', webhookError);
+        console.error('❌ Erro ao enviar webhook:', webhookError);
         // Não mostrar erro de webhook para o usuário, pois o formulário foi salvo com sucesso
       }
 
