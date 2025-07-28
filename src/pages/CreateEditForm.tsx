@@ -58,7 +58,8 @@ const CreateEditForm = () => {
   });
 
   useEffect(() => {
-    console.log('CreateEditForm carregado, formId:', formId);
+    console.log('🟢 CreateEditForm carregado! FormId:', formId);
+    console.log('🟢 CreateEditForm carregado, formId:', formId);
     fetchFolders();
     if (formId) {
       loadForm();
