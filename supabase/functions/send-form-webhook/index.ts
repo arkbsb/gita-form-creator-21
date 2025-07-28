@@ -21,25 +21,47 @@ serve(async (req) => {
     const { formId, action } = await req.json();
     console.log(`Processing webhook for form ${formId} with action: ${action}`);
 
-    // Get form data with fields
-    const { data: form, error: formError } = await supabase
-      .from('forms')
-      .select(`
-        *,
-        form_fields(*)
-      `)
-      .eq('id', formId)
-      .maybeSingle();
+    // Retry mechanism to handle database consistency
+    let form = null;
+    let attempts = 0;
+    const maxAttempts = 5;
+    const retryDelay = 1000; // 1 second between retries
 
-    if (formError) {
-      console.error('Error fetching form:', formError);
-      throw formError;
+    while (!form && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Attempt ${attempts}/${maxAttempts} to fetch form ${formId}`);
+      
+      // Get form data with fields
+      const { data: formData, error: formError } = await supabase
+        .from('forms')
+        .select(`
+          *,
+          form_fields(*)
+        `)
+        .eq('id', formId)
+        .maybeSingle();
+
+      if (formError) {
+        console.error('Error fetching form:', formError);
+        throw formError;
+      }
+
+      if (formData) {
+        form = formData;
+        console.log(`✅ Form found on attempt ${attempts}`);
+        break;
+      } else {
+        console.log(`❌ Form not found on attempt ${attempts}, retrying in ${retryDelay}ms...`);
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
     }
 
     if (!form) {
-      console.log('Form not found:', formId);
+      console.log('Form not found after all retry attempts:', formId);
       return new Response(
-        JSON.stringify({ success: false, message: 'Form not found' }),
+        JSON.stringify({ success: false, message: 'Form not found after retries' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
