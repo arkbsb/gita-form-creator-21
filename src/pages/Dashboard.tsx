@@ -28,6 +28,9 @@ import {
   Sheet
 } from "lucide-react";
 import InviteManager from "@/components/InviteManager";
+import { FolderSidebar } from "@/components/FolderSidebar";
+import { FolderBreadcrumb } from "@/components/FolderBreadcrumb";
+import { FormsDragDrop } from "@/components/FormsDragDrop";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
@@ -46,6 +49,7 @@ interface Form {
   created_at: string;
   updated_at: string;
   webhook_url: string | null;
+  folder_id: string | null;
 }
 
 interface FormField {
@@ -74,6 +78,12 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [forms, setForms] = useState<Form[]>([]);
   const [formsLoading, setFormsLoading] = useState(true);
+  
+  // Estados para sistema de pastas
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderName, setSelectedFolderName] = useState<string | null>(null);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [formCounts, setFormCounts] = useState<Record<string, number>>({});
   
   // Estados para visualização de dados
   const [selectedFormId, setSelectedFormId] = useState<string>("");
@@ -118,8 +128,13 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchForms();
+      fetchFolders();
     }
   }, [user]);
+
+  useEffect(() => {
+    updateFormCounts();
+  }, [forms, folders]);
 
   const fetchForms = async () => {
     try {
@@ -143,6 +158,74 @@ const Dashboard = () => {
       console.error('Error fetching forms:', error);
     } finally {
       setFormsLoading(false);
+    }
+  };
+
+  const fetchFolders = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data, error } = await supabase
+        .from("folders")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .order("order_index");
+
+      if (error) throw error;
+      setFolders(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar pastas:", error);
+    }
+  };
+
+  const updateFormCounts = () => {
+    const counts: Record<string, number> = {};
+    
+    // Contar formulários na raiz
+    counts['root'] = forms.filter(form => !form.folder_id).length;
+    
+    // Contar formulários em cada pasta
+    folders.forEach(folder => {
+      counts[folder.id] = forms.filter(form => form.folder_id === folder.id).length;
+    });
+    
+    setFormCounts(counts);
+  };
+
+  const handleFolderSelect = (folderId: string | null) => {
+    setSelectedFolderId(folderId);
+    if (folderId) {
+      const folder = folders.find(f => f.id === folderId);
+      setSelectedFolderName(folder?.name || null);
+    } else {
+      setSelectedFolderName(null);
+    }
+  };
+
+  const handleFormMove = async (formId: string, targetFolderId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('forms')
+        .update({ folder_id: targetFolderId })
+        .eq('id', formId);
+
+      if (error) throw error;
+
+      fetchForms();
+      toast({
+        title: "Formulário movido!",
+        description: targetFolderId 
+          ? "Formulário movido para a pasta com sucesso."
+          : "Formulário movido para a raiz com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao mover formulário:", error);
+      toast({
+        title: "Erro ao mover formulário",
+        description: "Não foi possível mover o formulário.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -441,171 +524,56 @@ const Dashboard = () => {
 
           {/* Forms Management Tab */}
           <TabsContent value="forms">
-            <Card className="border border-form-field-border bg-gradient-to-br from-card to-form-field-bg">
-              <CardHeader>
-                <CardTitle>Seus Formulários</CardTitle>
-                <CardDescription>
-                  Gerencie, edite e analise suas criações
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {formsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Carregando formulários...</p>
-                  </div>
-                ) : forms.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhum formulário encontrado</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Comece criando seu primeiro formulário
-                    </p>
-                    <Button 
-                      onClick={() => navigate('/create-form')}
-                      className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Criar Primeiro Formulário
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {forms.map((form) => (
-                      <div 
-                        key={form.id}
-                        className="border border-form-field-border rounded-lg p-4 hover:border-primary/50 transition-all duration-300 bg-gradient-to-r from-form-field-bg to-form-field-hover"
+            <div className="flex h-[800px] border border-form-field-border rounded-lg bg-gradient-to-br from-card to-form-field-bg">
+              {/* Sidebar */}
+              <FolderSidebar
+                selectedFolderId={selectedFolderId}
+                onFolderSelect={handleFolderSelect}
+                onFolderUpdate={fetchFolders}
+                formCounts={formCounts}
+              />
+
+              {/* Main Content */}
+              <div className="flex-1 p-6 overflow-auto">
+                <div className="space-y-6">
+                  {/* Breadcrumb */}
+                  <FolderBreadcrumb selectedFolderName={selectedFolderName} />
+
+                  {/* Content */}
+                  {formsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Carregando formulários...</p>
+                    </div>
+                  ) : forms.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FormInput className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Nenhum formulário encontrado</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Comece criando seu primeiro formulário
+                      </p>
+                      <Button 
+                        onClick={() => navigate('/create-form')}
+                        className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="text-lg font-semibold">{form.title}</h3>
-                              <Badge variant={form.is_published ? "default" : "secondary"}>
-                                {form.is_published ? "Publicado" : "Rascunho"}
-                              </Badge>
-                              {(() => {
-                                const sheetsStatus = getSheetsStatus(form.webhook_url);
-                                if (sheetsStatus.sheetsSyncStatus === 'pending') {
-                                  return (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Badge variant="outline" className="flex items-center gap-1">
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                            Criando planilha
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Criando planilha Google Sheets...</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  );
-                                } else if (sheetsStatus.sheetsSyncStatus === 'success' && sheetsStatus.spreadsheetUrl) {
-                                  return (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Badge variant="outline" className="flex items-center gap-1 bg-success/10 text-success border-success/20">
-                                            <CheckCircle className="h-3 w-3" />
-                                            <a 
-                                              href={sheetsStatus.spreadsheetUrl} 
-                                              target="_blank" 
-                                              rel="noopener noreferrer"
-                                              className="hover:underline"
-                                            >
-                                              Google Sheets
-                                            </a>
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Clique para abrir a planilha</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  );
-                                } else if (sheetsStatus.sheetsSyncStatus === 'error') {
-                                  return (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Badge variant="outline" className="flex items-center gap-1 bg-destructive/10 text-destructive border-destructive/20">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            Erro na planilha
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{sheetsStatus.sheetsSyncError || 'Erro ao criar planilha'}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                            {form.description && (
-                              <p className="text-muted-foreground mb-2">{form.description}</p>
-                            )}
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              <span>
-                                Criado em {new Date(form.created_at).toLocaleDateString('pt-BR')}
-                              </span>
-                              <span>•</span>
-                              <span>
-                                Atualizado em {new Date(form.updated_at).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {form.is_published && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => copyFormLink(form.slug)}
-                              >
-                                <Copy className="w-4 h-4 mr-2" />
-                                Copiar Link
-                              </Button>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate(`/edit-form/${form.id}`)}>
-                                  <Edit3 className="w-4 h-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate(`/form-analytics/${form.id}`)}>
-                                  <BarChart3 className="w-4 h-4 mr-2" />
-                                  Respostas
-                                </DropdownMenuItem>
-                                {form.is_published && (
-                                  <DropdownMenuItem onClick={() => window.open(`/form/${form.slug}`, '_blank')}>
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    Visualizar
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeleteForm(form.id)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Criar Primeiro Formulário
+                      </Button>
+                    </div>
+                  ) : (
+                    <FormsDragDrop
+                      forms={forms}
+                      onFormMove={handleFormMove}
+                      onEditForm={(formId) => navigate(`/edit-form/${formId}`)}
+                      onViewAnalytics={(formId) => navigate(`/form-analytics/${formId}`)}
+                      onDeleteForm={handleDeleteForm}
+                      onCopyLink={copyFormLink}
+                      selectedFolderId={selectedFolderId}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           {/* Data Visualization Tab */}

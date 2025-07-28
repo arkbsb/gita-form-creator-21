@@ -196,6 +196,44 @@ export type Database = {
           },
         ]
       }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_field_responses: {
         Row: {
           created_at: string
@@ -338,6 +376,7 @@ export type Database = {
           background_image_url: string | null
           created_at: string
           description: string | null
+          folder_id: string | null
           id: string
           is_published: boolean
           require_login: boolean
@@ -356,6 +395,7 @@ export type Database = {
           background_image_url?: string | null
           created_at?: string
           description?: string | null
+          folder_id?: string | null
           id?: string
           is_published?: boolean
           require_login?: boolean
@@ -374,6 +414,7 @@ export type Database = {
           background_image_url?: string | null
           created_at?: string
           description?: string | null
+          folder_id?: string | null
           id?: string
           is_published?: boolean
           require_login?: boolean
@@ -387,7 +428,15 @@ export type Database = {
           user_id?: string
           webhook_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "forms_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
