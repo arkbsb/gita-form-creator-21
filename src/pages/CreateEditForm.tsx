@@ -32,7 +32,8 @@ import {
   Palette,
   ExternalLink,
   Copy,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Folder
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -63,6 +64,7 @@ interface FormData {
   success_message: string;
   submit_button_text: string;
   theme_color: string;
+  folder_id: string | null;
   // Mensagem de boas-vindas
   welcome_enabled: boolean;
   welcome_title: string;
@@ -116,6 +118,7 @@ const CreateEditForm = () => {
     success_message: 'Obrigado por sua resposta!',
     submit_button_text: 'Enviar',
     theme_color: '#718570',
+    folder_id: null,
     // Mensagem de boas-vindas
     welcome_enabled: false,
     welcome_title: 'Bem-vindo!',
@@ -132,6 +135,7 @@ const CreateEditForm = () => {
   });
 
   const [fields, setFields] = useState<FormField[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'fields' | 'settings'>('fields');
   const [editorTab, setEditorTab] = useState<'editor' | 'options'>('editor');
 
@@ -166,7 +170,28 @@ const CreateEditForm = () => {
     if (isEditing && user) {
       loadFormData();
     }
+    if (user) {
+      fetchFolders();
+    }
   }, [isEditing, user, formId]);
+
+  const fetchFolders = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data, error } = await supabase
+        .from("folders")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .order("order_index");
+
+      if (error) throw error;
+      setFolders(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar pastas:", error);
+    }
+  };
 
   const loadFormData = async () => {
     try {
@@ -205,6 +230,7 @@ const CreateEditForm = () => {
         success_message: extraSettings.success_message || formData.success_message,
         submit_button_text: extraSettings.submit_button_text || formData.submit_button_text,
         theme_color: extraSettings.theme_color || formData.theme_color,
+        folder_id: formData.folder_id,
         welcome_enabled: extraSettings.welcome_enabled || false,
         welcome_title: extraSettings.welcome_title || 'Bem-vindo!',
         welcome_description: extraSettings.welcome_description || 'Por favor, preencha o formulário abaixo.',
@@ -383,6 +409,7 @@ const CreateEditForm = () => {
         is_published: formData.is_published,
         slug: finalSlug,
         user_id: user?.id,
+        folder_id: formData.folder_id,
       };
 
       // Campos extras que serão armazenados no webhook_url como JSON
@@ -767,6 +794,39 @@ const CreateEditForm = () => {
                               className="bg-background rounded-l-none"
                             />
                           </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="folder">Pasta</Label>
+                          <Select 
+                            value={formData.folder_id || ""} 
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, folder_id: value || null }))}
+                          >
+                            <SelectTrigger className="bg-background">
+                              <div className="flex items-center space-x-2">
+                                <Folder className="h-4 w-4 text-muted-foreground" />
+                                <SelectValue placeholder="Selecione uma pasta (opcional)" />
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">
+                                <div className="flex items-center space-x-2">
+                                  <Folder className="h-4 w-4 text-muted-foreground" />
+                                  <span>Raiz (Todos os Formulários)</span>
+                                </div>
+                              </SelectItem>
+                              {folders.map((folder) => (
+                                <SelectItem key={folder.id} value={folder.id}>
+                                  <div className="flex items-center space-x-2">
+                                    <Folder className="h-4 w-4 text-muted-foreground" />
+                                    <span>{folder.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-sm text-muted-foreground">
+                            Escolha uma pasta para organizar seu formulário ou deixe em branco para a pasta raiz.
+                          </p>
                         </div>
                       </div>
 
