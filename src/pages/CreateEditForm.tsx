@@ -193,7 +193,11 @@ const CreateEditForm = () => {
   };
 
   const saveForm = async () => {
+    console.log('🟡 INÍCIO da função saveForm');
+    console.log('🟡 formData.title:', formData.title);
+    
     if (!formData.title.trim()) {
+      console.log('❌ Título vazio, retornando erro');
       toast({
         title: "Erro",
         description: "O título do formulário é obrigatório.",
@@ -202,9 +206,11 @@ const CreateEditForm = () => {
       return;
     }
 
+    console.log('✅ Título válido, continuando...');
     setLoading(true);
     try {
       let savedFormId = formId;
+      console.log('🟡 formId atual:', formId);
 
       if (formId) {
         // Atualizar formulário existente
